@@ -24,7 +24,7 @@ const TelaInicial = ({ onSelectOption }) => {
   };
 
   return (
-    <div className={`container mx-auto p-4 h-full flex flex-col justify-center items-center ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`container mx-auto p-4 h-screen w-screen flex flex-col justify-center items-center ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <h1 className="text-2xl font-bold">Lista de Compras</h1>
       <div className="mb-4">
         <label className="block mb-2">

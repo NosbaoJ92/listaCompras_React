@@ -91,7 +91,7 @@ const ValorDefinido = () => {
   };
 
   return (
-    <div className="container mx-auto h-full p-4 border">
+    <div className="container mx-auto h-screen w-screen p-4 border">
       <h1 className="text-2xl font-bold mb-4">Subtrair de Valor Pré-Definido</h1>
       <div className="mb-4">
         <label className="block mb-2">Valor Pré-Definido (R$)</label>
