@@ -2,20 +2,19 @@ import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-const AdicionarProduto = () => {
+const ValorDefinido = () => {
   const [produtos, setProdutos] = useState([]);
   const [nomeProduto, setNomeProduto] = useState('');
   const [valorProduto, setValorProduto] = useState('');
   const [quantidadeProduto, setQuantidadeProduto] = useState('');
+  const [valorPreDefinido, setValorPreDefinido] = useState('');
   const [erro, setErro] = useState('');
   const [editandoIndex, setEditandoIndex] = useState(null);
 
   const handleAddProduto = () => {
     if (!nomeProduto || !valorProduto || !quantidadeProduto) {
       setErro('Por favor, preencha todos os campos.');
-      setTimeout(() => {
-        setErro('');
-      }, 3000);
+      setTimeout(() => setErro(''), 3000);
       return;
     }
 
@@ -27,7 +26,7 @@ const AdicionarProduto = () => {
     };
 
     if (editandoIndex !== null) {
-      const produtosAtualizados = produtos.map((produto, index) => 
+      const produtosAtualizados = produtos.map((produto, index) =>
         index === editandoIndex ? novoProduto : produto
       );
       setProdutos(produtosAtualizados);
@@ -67,7 +66,7 @@ const AdicionarProduto = () => {
 
   const gerarPDF = () => {
     const doc = new jsPDF();
-    doc.text("Relatório de gestão de compras", 10, 10);
+    doc.text("Relatório de Subtração de Valor Pré-Definido", 10, 10);
 
     const tableColumn = ["Nome", "Valor Unitário", "Quantidade", "Total"];
     const tableRows = produtos.map((produto) => [
@@ -84,14 +83,27 @@ const AdicionarProduto = () => {
     });
 
     const totalCompra = calcularTotalCompra().toFixed(2);
+    const valorRestante = (valorPreDefinido - totalCompra).toFixed(2);
     doc.text(`Total da Compra: R$ ${totalCompra}`, 10, doc.lastAutoTable.finalY + 10);
+    doc.text(`Valor Restante: R$ ${valorRestante}`, 10, doc.lastAutoTable.finalY + 20);
 
-    doc.save('lista-produtos.pdf');
+    doc.save('valor-predefinido.pdf');
   };
 
   return (
     <div className="container mx-auto h-full p-4 border">
-      <h1 className="text-2xl font-bold mb-4">Adicionar Produtos</h1>
+      <h1 className="text-2xl font-bold mb-4">Subtrair de Valor Pré-Definido</h1>
+      <div className="mb-4">
+        <label className="block mb-2">Valor Pré-Definido (R$)</label>
+        <input
+          type="number"
+          placeholder="Ex: 100.00"
+          value={valorPreDefinido}
+          onChange={(e) => setValorPreDefinido(e.target.value)}
+          className="border rounded-md p-2 w-full text-black"
+        />
+      </div>
+
       <div className="flex gap-4 mb-4 flex-wrap">
         <input
           type="text"
@@ -129,7 +141,7 @@ const AdicionarProduto = () => {
         <p className="text-red-500 mb-4">{erro}</p>
       )}
 
-      <table id="tabelaProdutos" className="w-full table-auto mb-4">
+      <table className="w-full table-auto mb-4">
         <thead>
           <tr className="bg-gray-400">
             <th className="px-4 py-2 border-2 border-black text-black">Nome</th>
@@ -180,4 +192,4 @@ const AdicionarProduto = () => {
   );
 };
 
-export default AdicionarProduto;
+export default ValorDefinido;

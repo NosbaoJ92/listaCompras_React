@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import TelaInicial from './TelaInicial';
 import AdicionarProduto from './AdicionarProduto';
+import ValorDefinido from './ValorDefinido';
+import ValorMaximo from './ValorMaximo';
 
 const App = () => {
   const [option, setOption] = useState('');
   const [subOption, setSubOption] = useState('');
 
-  const handleSelectOption = (option, subOption) => {
-    setOption(option);
-    setSubOption(subOption);
+  const handleSelectOption = (selectedOption, selectedSubOption) => {
+    setOption(selectedOption);
+    setSubOption(selectedSubOption);
   };
 
   return (
-    <div className="min-h-dvh p-4">
+    <div className="h-dvh w-dvw p-4">
       {option === '' && (
         <TelaInicial onSelectOption={handleSelectOption} />
       )}
@@ -21,7 +23,13 @@ const App = () => {
         <AdicionarProduto />
       )}
 
-      {/* Outras opções e telas podem ser adicionadas aqui */}
+      {option === 'estipular' && subOption === 'subtrair' && (
+        <ValorDefinido />
+      )}
+
+      {option === 'estipular' && subOption === 'maximo' && (
+        <ValorMaximo />
+      )}
     </div>
   );
 };
