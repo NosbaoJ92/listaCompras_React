@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useTheme } from './ThemeContext';
 
 const TelaInicial = ({ onSelectOption }) => {
-  const [option, setOption] = useState('');
-  const [subOption, setSubOption] = useState('');
+  const [option, setOption] = React.useState('');
+  const [subOption, setSubOption] = React.useState('');
+  const { modoNoturno, toggleModoNoturno } = useTheme();
 
   const handleMainOptionChange = (e) => {
     setOption(e.target.value);
@@ -14,8 +16,8 @@ const TelaInicial = ({ onSelectOption }) => {
   };
 
   return (
-    <div className="container mx-auto p-4 h-full flex flex-col justify-center items-center bg-black">
-      <h1 className="text-2xl font-bold mb-4">Lista de Compras</h1>
+    <div className={`container mx-auto p-4 h-full flex flex-col justify-center items-center ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+    <h1 className="text-2xl font-bold">Lista de Compras</h1>
       <div className="mb-4">
         <label className="block mb-2">
           <input
