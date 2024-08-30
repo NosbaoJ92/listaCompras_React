@@ -8,13 +8,12 @@ const ValorMaximo = () => {
   const [valorProduto, setValorProduto] = useState('');
   const [quantidadeProduto, setQuantidadeProduto] = useState('');
   const [valorMaximo, setValorMaximo] = useState('');
-  const [valorMaximoConfirmado, setValorMaximoConfirmado] = useState(null); // Valor máximo confirmado
+  const [valorMaximoConfirmado, setValorMaximoConfirmado] = useState(null);
   const [erro, setErro] = useState('');
   const [editandoIndex, setEditandoIndex] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [produtoTemp, setProdutoTemp] = useState(null);
 
-  // Função para validar se valorMaximo é um número
   const valorMaximoNumerico = parseFloat(valorMaximo) || 0;
   const valorMaximoConfirmadoNumerico = parseFloat(valorMaximoConfirmado) || 0;
 
@@ -32,7 +31,6 @@ const ValorMaximo = () => {
       total: parseFloat(valorProduto) * parseInt(quantidadeProduto),
     };
 
-    // Calcular o total da compra sem o item a ser atualizado (se aplicável)
     const totalAtual = calcularTotalCompra() - (editandoIndex !== null ? produtos[editandoIndex].total : 0);
     const novoTotalCompra = totalAtual + novoProduto.total;
 
@@ -65,6 +63,34 @@ const ValorMaximo = () => {
 
   const handleDeleteProduto = (index) => {
     const produtosAtualizados = produtos.filter((_, i) => i !== index);
+    setProdutos(produtosAtualizados);
+  };
+
+  const handleIncrementarQuantidade = (index) => {
+    const produtosAtualizados = produtos.map((produto, i) => {
+      if (i === index) {
+        return {
+          ...produto,
+          quantidade: produto.quantidade + 1,
+          total: (produto.quantidade + 1) * produto.valor,
+        };
+      }
+      return produto;
+    });
+    setProdutos(produtosAtualizados);
+  };
+
+  const handleDecrementarQuantidade = (index) => {
+    const produtosAtualizados = produtos.map((produto, i) => {
+      if (i === index && produto.quantidade > 1) {
+        return {
+          ...produto,
+          quantidade: produto.quantidade - 1,
+          total: (produto.quantidade - 1) * produto.valor,
+        };
+      }
+      return produto;
+    });
     setProdutos(produtosAtualizados);
   };
 
@@ -140,7 +166,7 @@ const ValorMaximo = () => {
   };
 
   return (
-    <div className="container mx-auto p-4  h-full w-full">
+    <div className="container mx-auto p-4 h-full w-full">
       <h1 className="text-2xl font-bold mb-4">Estipular Valor Máximo de Gasto</h1>
       <div className="mb-4">
         <label className="block mb-2">Valor Máximo (R$)</label>
@@ -216,7 +242,21 @@ const ValorMaximo = () => {
               <tr key={index} className="bg-white text-center border-b text-black">
                 <td className="px-4 py-2 border-2 border-black">{produto.nome}</td>
                 <td className="px-4 py-2 border-2 border-black">R$ {produto.valor.toFixed(2)}</td>
-                <td className="px-4 py-2 border-2 border-black">{produto.quantidade}</td>
+                <td className="px-4 py-2 border-2 border-black">
+                  <button
+                    onClick={() => handleDecrementarQuantidade(index)}
+                    className="bg-gray-400 text-white rounded-md py-1 px-2"
+                  >
+                    -
+                  </button>
+                  <span className="mx-2">{produto.quantidade}</span>
+                  <button
+                    onClick={() => handleIncrementarQuantidade(index)}
+                    className="bg-gray-400 text-white rounded-md py-1 px-1.5"
+                  >
+                    +
+                  </button>
+                </td>
                 <td className="px-4 py-2 border-2 border-black">R$ {produto.total.toFixed(2)}</td>
                 <td className="px-4 py-2 border-2 border-black">
                   <button 
