@@ -14,7 +14,7 @@ const App = () => {
   };
 
   return (
-    <div className="h-dvh w-dvw p-4">
+    <div className="h-dvh w-dvw p-4 bg-white overflow-auto">
       {option === '' && (
         <TelaInicial onSelectOption={handleSelectOption} />
       )}

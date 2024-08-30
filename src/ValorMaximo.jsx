@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { MoonIcon, SunIcon } from '@heroicons/react/24/outline'; // Certifique-se de instalar @heroicons/react
 
 const ValorMaximo = () => {
   const [produtos, setProdutos] = useState([]);
@@ -8,11 +9,12 @@ const ValorMaximo = () => {
   const [valorProduto, setValorProduto] = useState('');
   const [quantidadeProduto, setQuantidadeProduto] = useState('');
   const [valorMaximo, setValorMaximo] = useState('');
-  const [valorMaximoConfirmado, setValorMaximoConfirmado] = useState(null); // Valor máximo confirmado
+  const [valorMaximoConfirmado, setValorMaximoConfirmado] = useState(null);
   const [erro, setErro] = useState('');
   const [editandoIndex, setEditandoIndex] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [produtoTemp, setProdutoTemp] = useState(null);
+  const [modoNoturno, setModoNoturno] = useState(false);
 
   // Função para validar se valorMaximo é um número
   const valorMaximoNumerico = parseFloat(valorMaximo) || 0;
@@ -140,8 +142,17 @@ const ValorMaximo = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 border">
-      <h1 className="text-2xl font-bold mb-4">Estipular Valor Máximo de Gasto</h1>
+    <div className={`container mx-auto p-4 border h-full w-full ${modoNoturno ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Estipular Valor Máximo de Gasto</h1>
+        <button
+          onClick={() => setModoNoturno(!modoNoturno)}
+          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+        >
+          {modoNoturno ? <SunIcon className="h-6 w-6 text-yellow-500" /> : <MoonIcon className="h-6 w-6 text-gray-500" />}
+        </button>
+      </div>
+
       <div className="mb-4">
         <label className="block mb-2">Valor Máximo (R$)</label>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -150,7 +161,7 @@ const ValorMaximo = () => {
             placeholder="Ex: 100.00"
             value={valorMaximo}
             onChange={(e) => setValorMaximo(e.target.value)}
-            className="border rounded-md p-2 flex-1 text-black"
+            className={`border rounded-md p-2 flex-1 ${modoNoturno ? 'bg-gray-700 text-white' : 'bg-white text-black'}`}
           />
           <button
             onClick={confirmarValorMaximo}
@@ -168,7 +179,7 @@ const ValorMaximo = () => {
           value={nomeProduto}
           onChange={(e) => setNomeProduto(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 flex-1 text-black"
+          className={`border rounded-md p-2 flex-1 ${modoNoturno ? 'bg-gray-700 text-white' : 'bg-white text-black'}`}
         />
         <input
           type="number"
@@ -176,7 +187,7 @@ const ValorMaximo = () => {
           value={valorProduto}
           onChange={(e) => setValorProduto(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 flex-1 text-black"
+          className={`border rounded-md p-2 flex-1 ${modoNoturno ? 'bg-gray-700 text-white' : 'bg-white text-black'}`}
         />
         <input
           type="number"
@@ -184,7 +195,7 @@ const ValorMaximo = () => {
           value={quantidadeProduto}
           onChange={(e) => setQuantidadeProduto(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 flex-1 text-black"
+          className={`border rounded-md p-2 flex-1 ${modoNoturno ? 'bg-gray-700 text-white' : 'bg-white text-black'}`}
         />
         <button
           onClick={handleAddProduto}
@@ -201,19 +212,19 @@ const ValorMaximo = () => {
       )}
 
       <div className="overflow-x-auto mb-4">
-        <table className="w-full min-w-max table-auto">
+        <table className={`w-full min-w-max table-auto ${modoNoturno ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
           <thead>
-            <tr className="bg-gray-400">
-              <th className="px-4 py-2 border-2 border-black text-black">Nome</th>
-              <th className="px-4 py-2 border-2 border-black text-black">Valor Unitário</th>
-              <th className="px-4 py-2 border-2 border-black text-black">Quantidade</th>
-              <th className="px-4 py-2 border-2 border-black text-black">Total</th>
-              <th className="px-4 py-2 border-2 border-black text-black">Ações</th>
+            <tr className={`${modoNoturno ? 'bg-gray-700' : 'bg-gray-400'}`}>
+              <th className="px-4 py-2 border-2 border-black">Nome</th>
+              <th className="px-4 py-2 border-2 border-black">Valor Unitário</th>
+              <th className="px-4 py-2 border-2 border-black">Quantidade</th>
+              <th className="px-4 py-2 border-2 border-black">Total</th>
+              <th className="px-4 py-2 border-2 border-black">Ações</th>
             </tr>
           </thead>
           <tbody>
             {produtos.map((produto, index) => (
-              <tr key={index} className="bg-white text-center border-b text-black">
+              <tr key={index} className={`${modoNoturno ? 'bg-gray-800' : 'bg-white'} text-center border-b`}>
                 <td className="px-4 py-2 border-2 border-black">{produto.nome}</td>
                 <td className="px-4 py-2 border-2 border-black">R$ {produto.valor.toFixed(2)}</td>
                 <td className="px-4 py-2 border-2 border-black">{produto.quantidade}</td>
@@ -263,9 +274,9 @@ const ValorMaximo = () => {
 
       {modalAberto && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
-          <div className="bg-white w-full max-w-md p-6 rounded-lg">
-            <h2 className="text-xl text-black font-bold mb-4">Valor Máximo Atingido</h2>
-            <p className="mb-4 text-black">O valor da compra excedeu o valor máximo estipulado. Deseja continuar e adicionar o produto ou revisar os itens?</p>
+          <div className={`bg-white w-full max-w-md p-6 rounded-lg ${modoNoturno ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
+            <h2 className="text-xl font-bold mb-4">Valor Máximo Atingido</h2>
+            <p className="mb-4">O valor da compra excedeu o valor máximo estipulado. Deseja continuar e adicionar o produto ou revisar os itens?</p>
             <div className="flex justify-end">
               <button
                 onClick={handleModalRevisar}

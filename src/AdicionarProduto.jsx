@@ -90,88 +90,92 @@ const AdicionarProduto = () => {
   };
 
   return (
-    <div className="container mx-auto h-full p-4 border">
-      <h1 className="text-2xl font-bold mb-4">Adicionar Produtos</h1>
-      <div className="flex gap-4 mb-4 flex-wrap">
-        <input
-          type="text"
-          placeholder="Nome do Produto"
-          value={nomeProduto}
-          onChange={(e) => setNomeProduto(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 w-1/4 text-black"
-        />
-        <input
-          type="number"
-          placeholder="Valor"
-          value={valorProduto}
-          onChange={(e) => setValorProduto(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 w-1/4 text-black"
-        />
-        <input
-          type="number"
-          placeholder="Quantidade"
-          value={quantidadeProduto}
-          onChange={(e) => setQuantidadeProduto(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="border rounded-md p-2 w-1/4 text-black"
-        />
-        <button
-          onClick={handleAddProduto}
-          className="bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600"
-        >
-          {editandoIndex !== null ? 'Atualizar Produto' : 'Adicionar Produto'}
-        </button>
+    <div className="container mx-auto p-6 max-w-4xl">
+      <h1 className="text-3xl font-semibold mb-6 text-gray-800">Adicionar Produtos</h1>
+      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="Nome do Produto"
+            value={nomeProduto}
+            onChange={(e) => setNomeProduto(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="border border-gray-300 rounded-md p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="number"
+            placeholder="Valor"
+            value={valorProduto}
+            onChange={(e) => setValorProduto(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="border border-gray-300 rounded-md p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="number"
+            placeholder="Quantidade"
+            value={quantidadeProduto}
+            onChange={(e) => setQuantidadeProduto(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="border border-gray-300 rounded-md p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleAddProduto}
+            className="bg-blue-600 text-white rounded-md p-3 hover:bg-blue-700 col-span-1 sm:col-span-3"
+          >
+            {editandoIndex !== null ? 'Atualizar Produto' : 'Adicionar Produto'}
+          </button>
+        </div>
+
+        {erro && (
+          <p className="text-red-500 mb-4">{erro}</p>
+        )}
       </div>
 
-      {erro && (
-        <p className="text-red-500 mb-4">{erro}</p>
-      )}
-
-      <table id="tabelaProdutos" className="w-full table-auto mb-4">
-        <thead>
-          <tr className="bg-gray-400">
-            <th className="px-4 py-2 border-2 border-black text-black">Nome</th>
-            <th className="px-4 py-2 border-2 border-black text-black">Valor Unitário</th>
-            <th className="px-4 py-2 border-2 border-black text-black">Quantidade</th>
-            <th className="px-4 py-2 border-2 border-black text-black">Total</th>
-            <th className="px-4 py-2 border-2 border-black text-black">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {produtos.map((produto, index) => (
-            <tr key={index} className="bg-white text-center border-b text-black">
-              <td className="px-4 py-2 border-2 border-black">{produto.nome}</td>
-              <td className="px-4 py-2 border-2 border-black">R$ {produto.valor.toFixed(2)}</td>
-              <td className="px-4 py-2 border-2 border-black">{produto.quantidade}</td>
-              <td className="px-4 py-2 border-2 border-black">R$ {produto.total.toFixed(2)}</td>
-              <td className="px-4 py-2 border-2 border-black">
-                <button 
-                  onClick={() => handleEditProduto(index)} 
-                  className="bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600 mr-2"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDeleteProduto(index)}
-                  className="bg-red-500 text-white rounded-md p-2 hover:bg-red-600"
-                >
-                  Excluir
-                </button>
-              </td>
+      <div className="overflow-x-auto mb-6 bg-white p-4 rounded-lg shadow-md">
+        <table className="min-w-full bg-white border border-gray-200">
+          <thead>
+            <tr className="bg-gray-200 text-gray-700">
+              <th className="px-4 py-2 border-b">Nome</th>
+              <th className="px-4 py-2 border-b">Valor Unitário</th>
+              <th className="px-4 py-2 border-b">Quantidade</th>
+              <th className="px-4 py-2 border-b">Total</th>
+              <th className="px-4 py-2 border-b">Ações</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {produtos.map((produto, index) => (
+              <tr key={index} className="text-gray-700">
+                <td className="px-4 py-2 border-b">{produto.nome}</td>
+                <td className="px-4 py-2 border-b">R$ {produto.valor.toFixed(2)}</td>
+                <td className="px-4 py-2 border-b">{produto.quantidade}</td>
+                <td className="px-4 py-2 border-b">R$ {produto.total.toFixed(2)}</td>
+                <td className="px-4 py-2 border-b flex gap-2 justify-center">
+                  <button 
+                    onClick={() => handleEditProduto(index)} 
+                    className="bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduto(index)}
+                    className="bg-red-500 text-white rounded-md p-2 hover:bg-red-600"
+                  >
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <div className="flex w-full justify-between">
-        <h2 className="text-xl font-bold mt-4">
-          Total da Compra: <span className="text-green-500">R$ {calcularTotalCompra().toFixed(2)}</span>
+      <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold text-gray-800">
+          Total da Compra: <span className="text-green-600">R$ {calcularTotalCompra().toFixed(2)}</span>
         </h2>
         <button 
           onClick={gerarPDF} 
-          className="bg-green-500 text-white rounded-md p-2 hover:bg-green-600 mt-4"
+          className="bg-green-600 text-white rounded-md p-3 hover:bg-green-700"
         >
           Gerar PDF
         </button>
