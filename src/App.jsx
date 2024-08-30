@@ -19,7 +19,7 @@ const AppContent = () => {
 
   return (
     <div className={`h-dvh w-dvw overflow-auto relative ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
-      <div className="flex absolute right-0 p-4">
+      <div className=" p-4">
         {/* <button
           onClick={toggleModoNoturno}
           className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
