@@ -8,16 +8,24 @@ const TelaInicial = ({ onSelectOption }) => {
 
   const handleMainOptionChange = (e) => {
     setOption(e.target.value);
-    setSubOption('');
+    setSubOption(''); // Limpa subopção ao mudar a opção principal
   };
 
   const handleSubOptionChange = (e) => {
     setSubOption(e.target.value);
   };
 
+  const handleConfirm = () => {
+    if (option === 'estipular' && !subOption) {
+      alert('Por favor, selecione uma subopção para "Estipular valor".');
+      return;
+    }
+    onSelectOption(option, subOption);
+  };
+
   return (
     <div className={`container mx-auto p-4 h-full flex flex-col justify-center items-center ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-    <h1 className="text-2xl font-bold">Lista de Compras</h1>
+      <h1 className="text-2xl font-bold">Lista de Compras</h1>
       <div className="mb-4">
         <label className="block mb-2">
           <input
@@ -67,7 +75,7 @@ const TelaInicial = ({ onSelectOption }) => {
       )}
 
       <button
-        onClick={() => onSelectOption(option, subOption)}
+        onClick={handleConfirm}
         className="bg-blue-500 text-white rounded-lg p-2 hover:bg-blue-600"
       >
         Confirmar
