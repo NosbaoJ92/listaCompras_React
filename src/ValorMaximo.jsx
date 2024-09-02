@@ -102,6 +102,10 @@ const ValorMaximo = () => {
     return produtos.reduce((acc, produto) => acc + produto.total, 0);
   };
 
+  const calcularValorRestante = () => {
+    return valorMaximoConfirmadoNumerico - calcularTotalCompra();
+  };
+
   const resetarCampos = () => {
     setNomeProduto('');
     setValorProduto('');
@@ -183,7 +187,7 @@ const ValorMaximo = () => {
 
   return (
     <div className={`container mx-auto p-4 h-screen w-screen ${modoNoturno ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
-      <div className="flex w-full justify-between items-center mb-4 border">
+      <div className="flex w-full justify-between items-center mb-4">
         <IconButton onClick={handleMenuClick}>
           <MenuIcon />
         </IconButton>
@@ -231,11 +235,11 @@ const ValorMaximo = () => {
         />
         <input
           type="number"
-          placeholder="Valor"
+          placeholder="Valor (R$)"
           value={valorProduto}
           onChange={(e) => setValorProduto(e.target.value)}
           onKeyDown={handleKeyDown}
-          className={`border rounded-md p-2 flex w-full sm:w-1/3 ${modoNoturno ? 'bg-gray-700 text-white' : 'text-black'}`}
+          className={`border rounded-md p-2 flex w-full ${modoNoturno ? 'bg-gray-700 text-white' : 'text-black'}`}
         />
         <input
           type="number"
@@ -243,89 +247,89 @@ const ValorMaximo = () => {
           value={quantidadeProduto}
           onChange={(e) => setQuantidadeProduto(e.target.value)}
           onKeyDown={handleKeyDown}
-          className={`border rounded-md p-2 flex w-full sm:w-1/3 ${modoNoturno ? 'bg-gray-700 text-white' : 'text-black'}`}
+          className={`border rounded-md p-2 flex w-full ${modoNoturno ? 'bg-gray-700 text-white' : 'text-black'}`}
         />
         <button
           onClick={handleAddProduto}
-          className="bg-blue-500 text-white rounded-md p-2 w-full sm:w-1/3 hover:bg-blue-600"
+          className="bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600 w-full"
         >
-          {editandoIndex !== null ? 'Atualizar Produto' : 'Adicionar Produto'}
+          {editandoIndex !== null ? 'Salvar Alterações' : 'Adicionar Produto'}
         </button>
       </div>
 
       {erro && <p className="text-red-500 mb-4">{erro}</p>}
 
-      {valorMaximoConfirmado !== null && (
-        <div className="bg-yellow-100 p-4 rounded-md mb-4">
+      <h2 className="text-xl font-bold mb-2">Lista de Compras</h2>
+      <div className="bg-yellow-100 p-4 rounded-md mb-4">
           <p className="text-yellow-800 font-bold">Valor Máximo Confirmado: R$ {valorMaximoConfirmado}</p>
         </div>
-      )}
-    <div className="overflow-x-auto mb-4">
-    <table className="w-full min-w-max table-auto">
-        <thead className={`${modoNoturno ? 'bg-gray-700 text-white' : 'bg-gray-200'}`}>
-          <tr>
-            <th className="p-2 text-left">Produto</th>
-            <th className="p-2 text-left">Valor Unitário</th>
-            <th className="p-2 text-left">Quantidade</th>
-            <th className="p-2 text-left">Total</th>
-            <th className="p-2 text-left">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {produtos.map((produto, index) => (
-            <tr key={index} className={`${modoNoturno ? 'bg-gray-700 text-white' : 'bg-white'}`}>
-              <td className="p-2">{produto.nome}</td>
-              <td className="p-2">R$ {produto.valor.toFixed(2)}</td>
-              <td className="p-2">
-                <button
-                  onClick={() => handleDecrementarQuantidade(index)}
-                  className="bg-red-500 text-white rounded-md px-2 hover:bg-red-600"
-                >
-                  -
-                </button>
-                <span className="px-2">{produto.quantidade}</span>
-                <button
+      <div className="overflow-x-auto mb-4">
+        <table className="w-full min-w-max table-auto">
+          <thead>
+            <tr className="bg-gray-400">
+              <th className="px-4 py-2 border-2 border-black text-black">Nome</th>
+              <th className="px-4 py-2 border-2 border-black text-black">Valor Unitário</th>
+              <th className="px-4 py-2 border-2 border-black text-black">Quantidade</th>
+              <th className="px-4 py-2 border-2 border-black text-black">Total</th>
+              <th className="px-4 py-2 border-2 border-black text-black">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {produtos.map((produto, index) => (
+              <tr key={index} className="bg-white text-center border-b text-black">
+                <td className="px-4 py-2 border-2 border-black">{produto.nome}</td>
+                <td className="px-4 py-2 border-2 border-black">R$ {produto.valor.toFixed(2)}</td>
+                <td className="px-4 py-2 border-2 border-black">
+                  <button
+                    onClick={() => handleDecrementarQuantidade(index)}
+                    className="bg-red-500 text-white rounded-md px-2 hover:bg-red-600"
+                  >
+                    -
+                  </button>
+                  <span className="mx-2">{produto.quantidade}</span>
+                  <button
                   onClick={() => handleIncrementarQuantidade(index)}
                   className="bg-green-500 text-white rounded-md px-2 hover:bg-green-600"
-                >
+                  >
                   +
-                </button>
-              </td>
-              <td className="p-2">R$ {produto.total.toFixed(2)}</td>
-              <td className="p-2">
-                <button
-                  onClick={() => handleEditProduto(index)}
-                  className="bg-yellow-500 text-white rounded-md px-2 hover:bg-yellow-600"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDeleteProduto(index)}
-                  className="bg-red-500 text-white rounded-md px-2 ml-2 hover:bg-red-600"
-                >
-                  Excluir
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-      
+                  </button>
+                </td>
+                <td className="px-4 py-2 border-2 border-black">R$ {produto.total.toFixed(2)}</td>
+                <td className="px-4 py-2 border-2 border-black">
+                  <button 
+                    onClick={() => handleEditProduto(index)} 
+                    className="bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600 mr-2"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduto(index)}
+                    className="bg-red-500 text-white rounded-md p-2 hover:bg-red-600"
+                  >
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <div className="mt-4">
-        <p className="text-lg font-bold">Total da Compra: R$ {calcularTotalCompra().toFixed(2)}</p>
+      <div className="flex justify-between">
+        <div className="">
+        <p>Total da Compra: R$ {calcularTotalCompra().toFixed(2)}</p>
         {valorMaximoConfirmadoNumerico > 0 && (
-          <p className="text-lg font-bold text-red-600">
-            {calcularTotalCompra() > valorMaximoConfirmadoNumerico && `Valor Excedido: R$ ${(calcularTotalCompra() - valorMaximoConfirmadoNumerico).toFixed(2)}`}
-          </p>
+          <p>Valor Restante: R$ {calcularValorRestante().toFixed(2)}</p>
         )}
+        </div>
+        <div className="">
         <button
           onClick={gerarPDF}
           className="bg-blue-500 text-white rounded-md p-2 mt-4 hover:bg-blue-600"
         >
           Gerar PDF
         </button>
+        </div>
       </div>
     </div>
   );
