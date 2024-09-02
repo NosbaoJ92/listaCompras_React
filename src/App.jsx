@@ -18,22 +18,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className={`h-dvh w-dvw overflow-auto relative ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
-      <div className=" p-4">
-        {/* <button
-          onClick={toggleModoNoturno}
-          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-        >
-          {modoNoturno ? 'Modo Claro' : 'Modo Escuro'}
-        </button> */}
-
-        <button
-          onClick={toggleModoNoturno}
-          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-        >
-          {modoNoturno ? <SunIcon className="h-6 w-6 text-yellow-400" /> : <MoonIcon className="h-6 w-6 text-gray-600" />}
-        </button>
-      </div>
+    <div className={`h-dvh w-dvw  relative ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
 
       {option === '' && (
         <TelaInicial onSelectOption={handleSelectOption} />
