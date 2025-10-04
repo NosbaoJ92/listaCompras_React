@@ -4,7 +4,6 @@ import AdicionarProduto from './AdicionarProduto';
 import ValorDefinido from './ValorDefinido';
 import ValorMaximo from './ValorMaximo';
 import { ThemeProvider, useTheme } from './ThemeContext';
-import { MoonIcon, SunIcon } from '@heroicons/react/24/outline'; // Certifique-se de instalar @heroicons/react
 
 
 const AppContent = () => {
@@ -17,6 +16,11 @@ const AppContent = () => {
     setSubOption(selectedSubOption);
   };
 
+  const handleGoHome = () => {
+    setOption('');
+    setSubOption(''); // Resetar subOption também para garantir
+  };
+
   return (
     <div className={`h-dvh w-dvw  relative ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
 
@@ -25,15 +29,15 @@ const AppContent = () => {
       )}
 
       {option === 'somar' && (
-        <AdicionarProduto />
+        <AdicionarProduto  onGoHome={handleGoHome}/>
       )}
 
       {option === 'estipular' && subOption === 'subtrair' && (
-        <ValorDefinido />
+        <ValorDefinido  onGoHome={handleGoHome} />
       )}
 
       {option === 'estipular' && subOption === 'maximo' && (
-        <ValorMaximo />
+        <ValorMaximo  onGoHome={handleGoHome} />
       )}
     </div>
   );
