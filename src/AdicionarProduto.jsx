@@ -211,7 +211,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={nomeProduto}
                   onChange={(e) => setNomeProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <input
                   type="number"
@@ -219,7 +219,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={valorProduto}
                   onChange={(e) => setValorProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <input
                   type="number"
@@ -227,11 +227,11 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={quantidadeProduto}
                   onChange={(e) => setQuantidadeProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <button
                   onClick={handleAddProduto}
-                  className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 col-span-1 sm:col-span-2 transition"
+                  className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 col-span-2 sm:col-span-2 transition"
                 >
                   {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
                 </button>
@@ -244,7 +244,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                     setValorProduto("");
                     setQuantidadeProduto("");
                   }}
-                  className="bg-red-600 text-white font-semibold rounded-lg p-3 hover:bg-red-700 col-span-1 sm:col-span-1 transition"
+                  className="bg-red-600 text-white font-semibold rounded-lg p-3 hover:bg-red-700 col-span-2 sm:col-span-1 transition"
                 >
                   Cancelar
                 </button>
