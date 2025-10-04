@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { useTheme } from './ThemeContext';
+// Importação presumida do seu ThemeContext (mantenha o caminho correto)
+import { useTheme } from './ThemeContext'; 
 
-// Definições de Largura de Coluna OTIMIZADAS (Total = 100% da largura do container)
-// Agora que não há coluna de Ações separada, podemos usar classes de porcentagem/flexbox simples.
-const COL_NOME = "w-1/2"; // 50%
-const COL_VALOR_QTD = "w-1/6"; // 16.67% (para Valor Unitário e Quantidade)
-const COL_TOTAL = "w-1/6"; // 16.67% (para Total)
-// Total: 50 + 16.67 + 16.67 + 16.67 ≈ 100%
+// Definições de Largura OTIMIZADAS (Para o layout de TABELA em telas SM e maiores)
+const COL_NOME = "w-2/5"; // 40%
+const COL_VALOR = "w-1/5"; // 20%
+const COL_QTD = "w-1/5"; // 20%
+const COL_TOTAL = "w-1/5"; // 20%
+// Total: 40 + 20 + 20 + 20 = 100%
 
 const AdicionarProduto = ({ onGoHome }) => {
   const [nomeProduto, setNomeProduto] = useState("");
@@ -21,6 +22,7 @@ const AdicionarProduto = ({ onGoHome }) => {
   // Armazena o índice do produto cuja linha foi clicada para mostrar as ações
   const [produtoSelecionadoIndex, setProdutoSelecionadoIndex] = useState(null); 
 
+  // Assumindo que useTheme está definido em ThemeContext
   const { modoNoturno, toggleModoNoturno } = useTheme(); 
 
   useEffect(() => {
@@ -63,6 +65,7 @@ const AdicionarProduto = ({ onGoHome }) => {
       setQuantidadeProduto('');
       setErro('');
       setIsOpen(false);
+      setProdutoSelecionadoIndex(null); // Fecha qualquer pop-up de ação
   };
 
   const handleEditProduto = (index) => {
@@ -150,22 +153,20 @@ const AdicionarProduto = ({ onGoHome }) => {
             Sua Lista de Compras 🛒
         </h1>
 
-        {/* CONTAINER PRINCIPAL DA TABELA: Define a largura da "tabela" */}
+        {/* CONTAINER PRINCIPAL DA LISTA/TABELA */}
         <div className={`p-4 rounded-xl shadow-lg border ${modoNoturno ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
             
-            {/* CABEÇALHO (TOPO) - Fixo verticalmente */}
-            <div className="border-b-2 border-gray-300 dark:border-gray-600 sticky top-0 bg-inherit z-10">
-                {/* Removido o min-w-fit e overflow-x-auto, a largura agora é controlada pelas classes COL_* que somam 100% */}
+            {/* CABEÇALHO (APENAS DESKTOP/TABLET) */}
+            <div className="hidden sm:block border-b-2 border-gray-300 dark:border-gray-600 sticky top-0 bg-inherit z-10">
                 <div className="flex uppercase text-sm font-bold w-full"> 
                     <div className={`px-4 py-3 text-left ${COL_NOME}`}>Produto</div>
-                    <div className={`px-4 py-3 text-center ${COL_VALOR_QTD}`}>Valor Und.</div>
-                    <div className={`px-4 py-3 text-center ${COL_VALOR_QTD}`}>Qtd.</div>
-                    <div className={`px-4 py-3 text-center ${COL_TOTAL}`}>Total</div>
+                    <div className={`px-4 py-3 text-right ${COL_VALOR}`}>Valor Und.</div>
+                    <div className={`px-4 py-3 text-center ${COL_QTD}`}>Qtd.</div>
+                    <div className={`px-4 py-3 text-right ${COL_TOTAL}`}>Total</div>
                 </div>
             </div>
 
-            {/* CORPO (ITENS) - Área de rolagem vertical (max-h-96) */}
-            {/* Removido overflow-x-auto para forçar o ajuste de largura total */}
+            {/* CORPO (ITENS) - Área de rolagem vertical */}
             <div className="overflow-y-scroll max-h-96">
                 {produtos.length === 0 ? (
                   <div className="text-center py-10">
@@ -179,19 +180,54 @@ const AdicionarProduto = ({ onGoHome }) => {
                       <div 
                         key={index} 
                         onClick={() => handleRowClick(index)} // Ação de clique na linha
-                        className={`flex border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
+                        // flex-col para mobile, sm:flex-row para desktop
+                        className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
                                     ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}
                       >
-                        {/* Célula Produto */}
-                        <div className={`px-4 py-3 text-left flex items-center ${COL_NOME}`}>
-                            {produto.nome}
-                        </div>
-                        {/* Célula Valor Und. */}
-                        <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_VALOR_QTD}`}>R$ {produto.valor.toFixed(2)}</div>
-                        {/* Célula Qtd. */}
-                        <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_VALOR_QTD}`}>{produto.quantidade}</div>
-                        {/* Célula Total */}
-                        <div className={`px-4 py-3 font-semibold text-center flex items-center justify-center ${COL_TOTAL}`}>R$ {produto.total.toFixed(2)}</div>
+                        {/* =======================================================
+                            1. LAYOUT DE CARTÃO (MOBILE: sm:hidden)
+                        ======================================================= */}
+                        <div className={`p-4 sm:hidden w-full`}>
+                            {/* Nome do Produto (Destaque) */}
+                            <div className="font-extrabold text-lg mb-2">{produto.nome}</div>
+                            
+                            <div className="grid grid-cols-3 gap-y-1 gap-x-4 text-sm">
+                                
+                                {/* Valor Unitário */}
+                                <div className="flex flex-col">
+                                    <span className="font-semibold text-gray-400">Valor Und.:</span>
+                                    <span className="font-medium">R$ {produto.valor.toFixed(2)}</span>
+                                </div>
+                                
+                                {/* Quantidade */}
+                                <div className="flex flex-col text-center">
+                                    <span className="font-semibold text-gray-400">Qtd.:</span>
+                                    <span className="font-medium">{produto.quantidade}</span>
+                                </div>
+                                
+                                {/* Total do Item (Destaque) */}
+                                <div className="flex flex-col items-end">
+                                    <span className="font-semibold text-gray-400">Total Item:</span>
+                                    <span className="text-lg font-bold text-green-500">R$ {produto.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* =======================================================
+                            2. LAYOUT DE TABELA (DESKTOP: hidden sm:flex)
+                        ======================================================= */}
+                        <div className="hidden sm:flex w-full">
+                            {/* Célula Produto (40%) - ESQUERDA */}
+                            <div className={`px-4 py-3 text-left flex items-center ${COL_NOME}`}>
+                                {produto.nome}
+                            </div>
+                            {/* Célula Valor Und. (20%) - DIREITA */}
+                            <div className={`px-4 py-3 text-right flex items-center justify-end ${COL_VALOR}`}>R$ {produto.valor.toFixed(2)}</div>
+                            {/* Célula Qtd. (20%) - CENTRO */}
+                            <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_QTD}`}>{produto.quantidade}</div>
+                            {/* Célula Total (20%) - DIREITA e Destaque */}
+                            <div className={`px-4 py-3 font-semibold text-right flex items-center justify-end ${COL_TOTAL} text-lg text-green-600 dark:text-green-400`}>R$ {produto.total.toFixed(2)}</div>
+                        </div>
 
                         {/* POP-UP DE AÇÕES */}
                         {index === produtoSelecionadoIndex && (
@@ -223,17 +259,29 @@ const AdicionarProduto = ({ onGoHome }) => {
                 )}
             </div>
 
-            {/* RODAPÉ (TOTAL GERAL) - Fixo verticalmente */}
+            {/* RODAPÉ (TOTAL GERAL) - AGORA COM LAYOUT SEPARADO PARA MOBILE/DESKTOP */}
             {produtos.length > 0 && (
-                <div className={`border-t-4 border-green-500 dark:border-green-600 font-bold text-lg ${modoNoturno ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'} w-full`}>
-                    {/* Removido overflow-x-auto e min-w-fit */}
-                    <div className="flex w-full">
-                        {/* Coluna "Total Geral" (Mescla as três primeiras colunas) */}
-                        <div className={`px-4 py-3 text-right flex items-center justify-end ${COL_NOME} ${COL_VALOR_QTD} ${COL_VALOR_QTD} `}>
+                <div className={`border-t-4 border-green-500 dark:border-green-600 font-bold ${modoNoturno ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'} w-full`}>
+                    
+
+                    {/* LAYOUT MOBILE (sm:hidden) - Alinha tudo à direita e usa fontes grandes */}
+                    <div className="flex justify-between items-baseline p-4 sm:hidden">
+                        {/* Rótulo */}
+                        <div className="text-xl mr-2">Total Geral:</div>
+                        {/* Valor (Destacado) */}
+                        <div className="text-3xl text-green-600 dark:text-green-400">
+                            R$ {calcularTotalCompra().toFixed(2)}
+                        </div>
+                    </div>
+
+                    {/* LAYOUT DESKTOP (hidden sm:flex) - Mantém a estrutura de colunas */}
+                    <div className="hidden sm:flex w-full">
+                        {/* RÓTULO: Ocupa 80% (w-4/5) e é alinhado à direita */}
+                        <div className={`px-4 py-3 text-right flex items-center justify-end w-4/5 text-lg`}>
                             Total Geral:
                         </div> 
-                        {/* Coluna do Valor Total */}
-                        <div className={`px-4 py-3 text-center text-green-600 dark:text-green-400 flex items-center justify-center ${COL_TOTAL}`}>
+                        {/* VALOR: Ocupa 20% (COL_TOTAL) e é alinhado à direita com destaque */}
+                        <div className={`px-4 py-3 text-right text-2xl text-green-600 dark:text-green-400 flex items-center justify-end ${COL_TOTAL}`}>
                             R$ {calcularTotalCompra().toFixed(2)}
                         </div>
                     </div>
@@ -241,7 +289,7 @@ const AdicionarProduto = ({ onGoHome }) => {
             )}
         </div>
 
-        {/* Modal (Adicionar/Editar) - Omitido para brevidade... */}
+        {/* Modal (Adicionar/Editar) */}
         {isOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
             <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg dark:bg-gray-800">
@@ -301,7 +349,7 @@ const AdicionarProduto = ({ onGoHome }) => {
       </div>
 
     {/* Rodapé da Página: Botões de ação */}
-    <div className="container mx-auto max-w-4xl p-6 flex justify-between items-center w-full mt-4">
+    <div className="container mx-auto max-w-4xl flex justify-between items-center w-full mt-4">
         <button
             onClick={() => { setIsOpen(true); setEditandoIndex(null); }} 
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold"
