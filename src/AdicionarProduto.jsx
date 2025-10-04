@@ -3,6 +3,13 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useTheme } from './ThemeContext';
 
+// Definições de Largura de Coluna OTIMIZADAS (Total = 100% da largura do container)
+// Agora que não há coluna de Ações separada, podemos usar classes de porcentagem/flexbox simples.
+const COL_NOME = "w-1/2"; // 50%
+const COL_VALOR_QTD = "w-1/6"; // 16.67% (para Valor Unitário e Quantidade)
+const COL_TOTAL = "w-1/6"; // 16.67% (para Total)
+// Total: 50 + 16.67 + 16.67 + 16.67 ≈ 100%
+
 const AdicionarProduto = ({ onGoHome }) => {
   const [nomeProduto, setNomeProduto] = useState("");
   const [valorProduto, setValorProduto] = useState("");
@@ -11,6 +18,8 @@ const AdicionarProduto = ({ onGoHome }) => {
   const [editandoIndex, setEditandoIndex] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
+  // Armazena o índice do produto cuja linha foi clicada para mostrar as ações
+  const [produtoSelecionadoIndex, setProdutoSelecionadoIndex] = useState(null); 
 
   const { modoNoturno, toggleModoNoturno } = useTheme(); 
 
@@ -63,10 +72,12 @@ const AdicionarProduto = ({ onGoHome }) => {
       setQuantidadeProduto(produto.quantidade.toString());
       setEditandoIndex(index);
       setIsOpen(true);
+      setProdutoSelecionadoIndex(null); // Fecha o pop-up de ação
   };
 
   const handleDeleteProduto = (index) => {
       setProdutos(produtos.filter((_, i) => i !== index));
+      setProdutoSelecionadoIndex(null); // Fecha o pop-up de ação
   };
 
   const calcularTotalCompra = () => {
@@ -77,6 +88,11 @@ const AdicionarProduto = ({ onGoHome }) => {
     if (e.key === 'Enter') {
       handleAddProduto();
     }
+  };
+
+  // Alterna a linha selecionada para mostrar os ícones de ação
+  const handleRowClick = (index) => {
+      setProdutoSelecionadoIndex(index === produtoSelecionadoIndex ? null : index);
   };
 
   const gerarPDF = () => {
@@ -98,40 +114,27 @@ const AdicionarProduto = ({ onGoHome }) => {
       });
 
       const totalCompra = calcularTotalCompra().toFixed(2);
-      doc.text(`Total da Compra: R$ ${totalCompra}`, 10, doc.lastAutoTable.finalY + 10);
+      
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 30; 
+      
+      doc.text(`Total da Compra: R$ ${totalCompra}`, 10, finalY + 10);
 
       doc.save('lista-produtos.pdf');
   };
 
-  const AcoesBotoes = ({ index }) => (
-    <td className="px-4 py-2 flex gap-2 justify-center">
-        <button 
-            onClick={() => handleEditProduto(index)} 
-            className="bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600 transition duration-150"
-        >
-            Editar
-        </button>
-        <button
-            onClick={() => handleDeleteProduto(index)}
-            className="bg-red-500 text-white rounded-md p-2 hover:bg-red-600 transition duration-150"
-        >
-            Excluir
-        </button>
-    </td>
-  );
 
   return (
-    <div className={`min-h-screen p-6 relative ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`min-h-screen p-6 relative flex flex-col ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
         
-      <button 
-          onClick={onGoHome}
-          className="fixed top-4 left-4 z-50 p-3 rounded-full shadow-lg transition duration-300 text-sm font-semibold
-                    bg-white text-gray-800 hover:bg-gray-200 
-                    dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-      >
-          🏠
-      </button>
-
+      {/* Botões fixos (Home/Tema) */}
+      <button 
+          onClick={onGoHome}
+          className="fixed top-4 left-4 z-50 p-3 rounded-full shadow-lg transition duration-300 text-sm font-semibold
+                    bg-white text-gray-800 hover:bg-gray-200 
+                    dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+      >
+          🏠
+      </button>
       <button 
           onClick={toggleModoNoturno}
           className="fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg transition duration-300 text-sm font-semibold
@@ -141,62 +144,104 @@ const AdicionarProduto = ({ onGoHome }) => {
           {modoNoturno ? '☀️' : '🌙'}
       </button>
 
-      <div className="container mx-auto max-w-4xl pt-10">
+      {/* Conteúdo Principal */}
+      <div className="container mx-auto max-w-4xl pt-10 flex-grow">
         <h1 className="py-4 text-center text-4xl font-extrabold">
             Sua Lista de Compras 🛒
         </h1>
 
-        <div className={`overflow-x-auto mb-6 p-4 rounded-xl shadow-lg border ${modoNoturno ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className=" uppercase text-sm">
-                <th className="px-4 py-3 border-b-2 border-gray-300 dark:border-gray-600 text-left">Produto</th>
-                <th className="px-4 py-3 border-b-2 border-gray-300 dark:border-gray-600">Valor Und.</th>
-                <th className="px-4 py-3 border-b-2 border-gray-300 dark:border-gray-600">Qtd.</th>
-                <th className="px-4 py-3 border-b-2 border-gray-300 dark:border-gray-600">Total</th>
-                <th className="px-4 py-3 border-b-2 border-gray-300 dark:border-gray-600">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produtos.length === 0 ? (
-                <tr className="">
-                  <td colSpan="5" className="text-center py-10">
+        {/* CONTAINER PRINCIPAL DA TABELA: Define a largura da "tabela" */}
+        <div className={`p-4 rounded-xl shadow-lg border ${modoNoturno ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            
+            {/* CABEÇALHO (TOPO) - Fixo verticalmente */}
+            <div className="border-b-2 border-gray-300 dark:border-gray-600 sticky top-0 bg-inherit z-10">
+                {/* Removido o min-w-fit e overflow-x-auto, a largura agora é controlada pelas classes COL_* que somam 100% */}
+                <div className="flex uppercase text-sm font-bold w-full"> 
+                    <div className={`px-4 py-3 text-left ${COL_NOME}`}>Produto</div>
+                    <div className={`px-4 py-3 text-center ${COL_VALOR_QTD}`}>Valor Und.</div>
+                    <div className={`px-4 py-3 text-center ${COL_VALOR_QTD}`}>Qtd.</div>
+                    <div className={`px-4 py-3 text-center ${COL_TOTAL}`}>Total</div>
+                </div>
+            </div>
+
+            {/* CORPO (ITENS) - Área de rolagem vertical (max-h-96) */}
+            {/* Removido overflow-x-auto para forçar o ajuste de largura total */}
+            <div className="overflow-y-scroll max-h-96">
+                {produtos.length === 0 ? (
+                  <div className="text-center py-10">
                     <p className="font-semibold text-lg mb-2">Sua lista de compras está vazia. 📝</p>
                     <p>Clique em <b>'+ Adicionar Produto'</b> para começar a cadastrar seus itens!</p>
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {produtos.map((produto, index) => (
-                    <tr 
-                      key={index} 
-                      className={`text-center transition duration-100 ${index % 2 === 0 ? ' ' : ''}`}
-                    >
-                      <td className="px-4 py-2 border-b dark:border-gray-700 text-left">{produto.nome}</td>
-                      <td className="px-4 py-2 border-b dark:border-gray-700">R$ {produto.valor.toFixed(2)}</td>
-                      <td className="px-4 py-2 border-b dark:border-gray-700">{produto.quantidade}</td>
-                      <td className="px-4 py-2 border-b dark:border-gray-700 font-semibold">R$ {produto.total.toFixed(2)}</td>
-                      <AcoesBotoes index={index} />
-                    </tr>
-                  ))}
-                  <tr className={`border-t-4 border-green-500 dark:border-green-600 font-bold text-lg ${modoNoturno ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'}`}>
-                    <td className="px-4 py-3 text-right" colSpan="3">Total Geral:</td>
-                    <td className="px-4 py-3 text-center text-green-600 dark:text-green-400">R$ {calcularTotalCompra().toFixed(2)}</td>
-                    <td className="px-4 py-3"></td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
+                  </div>
+                ) : (
+                  <div>
+                    {produtos.map((produto, index) => (
+                        // Linha do Produto
+                      <div 
+                        key={index} 
+                        onClick={() => handleRowClick(index)} // Ação de clique na linha
+                        className={`flex border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
+                                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}
+                      >
+                        {/* Célula Produto */}
+                        <div className={`px-4 py-3 text-left flex items-center ${COL_NOME}`}>
+                            {produto.nome}
+                        </div>
+                        {/* Célula Valor Und. */}
+                        <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_VALOR_QTD}`}>R$ {produto.valor.toFixed(2)}</div>
+                        {/* Célula Qtd. */}
+                        <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_VALOR_QTD}`}>{produto.quantidade}</div>
+                        {/* Célula Total */}
+                        <div className={`px-4 py-3 font-semibold text-center flex items-center justify-center ${COL_TOTAL}`}>R$ {produto.total.toFixed(2)}</div>
+
+                        {/* POP-UP DE AÇÕES */}
+                        {index === produtoSelecionadoIndex && (
+                            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-1 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
+                                    className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition"
+                                    title="Editar"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteProduto(index); }}
+                                    className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition"
+                                    title="Excluir"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
+
+            {/* RODAPÉ (TOTAL GERAL) - Fixo verticalmente */}
+            {produtos.length > 0 && (
+                <div className={`border-t-4 border-green-500 dark:border-green-600 font-bold text-lg ${modoNoturno ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'} w-full`}>
+                    {/* Removido overflow-x-auto e min-w-fit */}
+                    <div className="flex w-full">
+                        {/* Coluna "Total Geral" (Mescla as três primeiras colunas) */}
+                        <div className={`px-4 py-3 text-right flex items-center justify-end ${COL_NOME} ${COL_VALOR_QTD} ${COL_VALOR_QTD} `}>
+                            Total Geral:
+                        </div> 
+                        {/* Coluna do Valor Total */}
+                        <div className={`px-4 py-3 text-center text-green-600 dark:text-green-400 flex items-center justify-center ${COL_TOTAL}`}>
+                            R$ {calcularTotalCompra().toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-        <button
-            onClick={() => setIsOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mt-6 transition"
-          >
-            + Adicionar Novo Produto
-          </button>
 
-
+        {/* Modal (Adicionar/Editar) - Omitido para brevidade... */}
         {isOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
             <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg dark:bg-gray-800">
@@ -211,7 +256,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={nomeProduto}
                   onChange={(e) => setNomeProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <input
                   type="number"
@@ -219,7 +264,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={valorProduto}
                   onChange={(e) => setValorProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <input
                   type="number"
@@ -227,11 +272,11 @@ const AdicionarProduto = ({ onGoHome }) => {
                   value={quantidadeProduto}
                   onChange={(e) => setQuantidadeProduto(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="col-span-2 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                 />
                 <button
                   onClick={handleAddProduto}
-                  className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 col-span-2 sm:col-span-2 transition"
+                  className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 col-span-3 sm:col-span-2 transition"
                 >
                   {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
                 </button>
@@ -244,7 +289,7 @@ const AdicionarProduto = ({ onGoHome }) => {
                     setValorProduto("");
                     setQuantidadeProduto("");
                   }}
-                  className="bg-red-600 text-white font-semibold rounded-lg p-3 hover:bg-red-700 col-span-2 sm:col-span-1 transition"
+                  className="bg-red-600 text-white font-semibold rounded-lg p-3 hover:bg-red-700 col-span-3 sm:col-span-1 transition"
                 >
                   Cancelar
                 </button>
@@ -253,18 +298,26 @@ const AdicionarProduto = ({ onGoHome }) => {
             </div>
           </div>
         )}
+      </div>
+
+    {/* Rodapé da Página: Botões de ação */}
+    <div className="container mx-auto max-w-4xl p-6 flex justify-between items-center w-full mt-4">
+        <button
+            onClick={() => { setIsOpen(true); setEditandoIndex(null); }} 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold"
+        >
+            + Adicionar Novo Produto
+        </button>
 
         {produtos.length > 0 && (
-          <div className="flex justify-end p-0">
             <button 
-              onClick={gerarPDF} 
-              className="bg-green-600 text-white font-semibold rounded-lg p-3 hover:bg-green-700 transition"
+                onClick={gerarPDF} 
+                className="bg-green-600 text-white font-semibold rounded-lg p-3 hover:bg-green-700 transition"
             >
-              📥 Gerar PDF do Relatório
+                📥 Gerar PDF do Relatório
             </button>
-          </div>
         )}
-      </div>
+    </div>
     </div>
   );
 };
