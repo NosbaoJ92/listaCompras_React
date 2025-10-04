@@ -231,7 +231,7 @@ const AdicionarProduto = ({ onGoHome }) => {
 
                         {/* POP-UP DE AÇÕES */}
                         {index === produtoSelecionadoIndex && (
-                            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-1 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
+                            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-4 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
                                     className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition"
@@ -357,14 +357,14 @@ const AdicionarProduto = ({ onGoHome }) => {
             + Adicionar Novo Produto
         </button>
 
-        {produtos.length > 0 && (
+{/*         {produtos.length > 0 && (
             <button 
                 onClick={gerarPDF} 
                 className="bg-green-600 text-white font-semibold rounded-lg p-3 hover:bg-green-700 transition"
             >
                 📥 Gerar PDF do Relatório
             </button>
-        )}
+        )} */}
     </div>
     </div>
   );
