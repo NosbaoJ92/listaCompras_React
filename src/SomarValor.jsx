@@ -89,8 +89,8 @@ const SomarValor = ({ onGoHome }) => {
 
   const constraints = {
   video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
     ...(isMobile
       ? {
           facingMode: { exact: "environment" }, // traseira
@@ -285,7 +285,7 @@ const SomarValor = ({ onGoHome }) => {
                     />
                     
                     {/* Linha vermelha central */}
-                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none"></div>
+                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none pulse-red"></div>
 
                     {/* Borda do scanner (opcional) */}
                     <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
@@ -298,24 +298,81 @@ const SomarValor = ({ onGoHome }) => {
               )}
 
               <div className="flex flex-col gap-4 mb-4">
-                <input type="number" placeholder="EAN do Produto" value={ean} onChange={(e) => setEan(e.target.value)} className="col-span-2 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                
-                <div className="mb-4 flex text-sm justify-between w-full gap-2">
-                  <button onClick={() => buscarProdutoPorEan(ean)} className="bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full">Buscar</button>
-                  <button onClick={() => setLeitorAtivo(!leitorAtivo)} className={`px-4 py-2 rounded-lg transition  w-full ${leitorAtivo ? "bg-red-600 text-white hover:bg-red-700" : "bg-green-600 text-white hover:bg-green-700"}`}>
+                <input
+                  type="number"
+                  placeholder="EAN do Produto"
+                  value={ean}
+                  onChange={(e) => setEan(e.target.value)}
+                  className="col-span-2 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
+                />
+
+                <div className="mb-4 flex w-full gap-2">
+                  <button
+                    onClick={() => buscarProdutoPorEan(ean)}
+                    className="flex-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold p-3"
+                  >
+                    Buscar
+                  </button>
+                  <button
+                    onClick={() => setLeitorAtivo(!leitorAtivo)}
+                    className={`flex-1 rounded-lg transition font-semibold p-3 ${
+                      leitorAtivo
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                    }`}
+                  >
                     {leitorAtivo ? "Parar Leitura" : "Ler código"}
                   </button>
                 </div>
 
-                <input type="text" placeholder="Nome do Produto" value={nomeProduto} onChange={(e) => setNomeProduto(e.target.value)} className="col-span-3 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                <input type="number" placeholder="Valor (R$)" value={valorProduto} onChange={(e) => setValorProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                <input type="number" placeholder="Quantidade" value={quantidadeProduto} onChange={(e) => setQuantidadeProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+                <input
+                  type="text"
+                  placeholder="Nome do Produto"
+                  value={nomeProduto}
+                  onChange={(e) => setNomeProduto(e.target.value)}
+                  className="col-span-3 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <input
+                  type="number"
+                  placeholder="Valor (R$)"
+                  value={valorProduto}
+                  onChange={(e) => setValorProduto(e.target.value)}
+                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <input
+                  type="number"
+                  placeholder="Quantidade"
+                  value={quantidadeProduto}
+                  onChange={(e) => setQuantidadeProduto(e.target.value)}
+                  className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
+                />
 
-                <div className="mb-4 flex w-full text-sm gap-2 justify-between">
-                  <button onClick={handleAddProduto} className="bg-blue-600 text-white w-full font-semibold rounded-lg hover:bg-blue-700 transition">{editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}</button>
-                  <button onClick={() => { setIsOpen(false); setErro(""); setEditandoIndex(null); setEan(""); setNomeProduto(""); setValorProduto(""); setQuantidadeProduto(""); setLeitorAtivo(false); if(codeReaderRef.current) codeReaderRef.current.reset(); }} className="bg-red-600 text-white font-semibold w-full rounded-lg hover:bg-red-700 transition">Cancelar</button>
+                <div className="mb-4 flex w-full gap-2">
+                  <button
+                    onClick={handleAddProduto}
+                    className="flex-1 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition p-3"
+                  >
+                    {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setErro("");
+                      setEditandoIndex(null);
+                      setEan("");
+                      setNomeProduto("");
+                      setValorProduto("");
+                      setQuantidadeProduto("");
+                      setLeitorAtivo(false);
+                      if (codeReaderRef.current) codeReaderRef.current.reset();
+                    }}
+                    className="flex-1 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition p-3"
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </div>
+
 
               {erro && <p className="text-red-500 font-medium mt-2">{erro}</p>}
             </div>
