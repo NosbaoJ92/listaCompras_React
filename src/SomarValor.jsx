@@ -3,6 +3,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useTheme } from './ThemeContext'; 
 import { BrowserMultiFormatReader } from "@zxing/library";
+import produtosBR from './produtosBR.json';
+
 
 
 const COL_NOME = "w-2/5";
@@ -37,36 +39,47 @@ const SomarValor = ({ onGoHome }) => {
 
   // 🔍 Função para buscar produto na API EANData
   const buscarProdutoPorEan = async (codigoEan) => {
-    if (!codigoEan) {
-      setErro("Informe um código EAN válido.");
+  if (!codigoEan) {
+    setErro("Informe um código EAN válido.");
+    setTimeout(() => setErro(""), 1500);
+    return;
+  }
+
+  // 🔹 1. Busca no JSON local
+  const produtoLocal = produtosBR.find(p => p.ean === codigoEan);
+  if (produtoLocal) {
+    setNomeProduto(produtoLocal.nome);
+    setValorProduto(produtoLocal.valor.toString());
+    setErro("");
+    return; // retorna sem chamar a API externa
+  }
+
+  // 🔹 2. Se não achou local, busca na API EANData
+  try {
+    const apiKey = "4210726968ED3C18"; // sua key
+    const url = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data && data.product) {
+      const produto = data.product;
+      const nome = produto.attributes?.product || produto.title || "Produto não identificado";
+      const preco = produto.attributes?.price || "";
+
+      setNomeProduto(nome);
+      if (preco) setValorProduto(preco.toString());
+      setErro("");
+    } else {
+      setErro("Produto não encontrado no EANData.");
       setTimeout(() => setErro(""), 1500);
-      return;
     }
+  } catch (err) {
+    console.error(err);
+    setErro("Erro ao consultar o EANData.");
+    setTimeout(() => setErro(""), 1500);
+  }
+};
 
-    try {
-      const apiKey = "4210726968ED3C18"; // substitua pela sua key do eandata.com
-      const url = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data && data.product) {
-        const produto = data.product;
-        const nome = produto.attributes?.product || produto.title || "Produto não identificado";
-        const preco = produto.attributes?.price || "";
-
-        setNomeProduto(nome);
-        if (preco) setValorProduto(preco.toString());
-        setErro("");
-      } else {
-        setErro("Produto não encontrado no EANData.");
-        setTimeout(() => setErro(""), 1500);
-      }
-    } catch (err) {
-      console.error(err);
-      setErro("Erro ao consultar o EANData.");
-      setTimeout(() => setErro(""), 1500);
-    }
-  };
 
   useEffect(() => {
   if (!isOpen) return;
@@ -202,22 +215,88 @@ const SomarValor = ({ onGoHome }) => {
                 <p>Clique em <b>'+ Adicionar Produto'</b> para começar!</p>
               </div>
             ) : (
-              produtos.map((produto, index) => (
-                <div 
-                  key={index} 
-                  onClick={() => handleRowClick(index)}
-                  className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
-                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}>
-                  <div className={`p-4 sm:hidden w-full`}>
-                    <div className="font-extrabold text-lg mb-2">{produto.nome}</div>
-                    <div className="grid grid-cols-3 gap-y-1 gap-x-4 text-sm">
-                      <div><span className="font-semibold text-gray-400">Valor Und.:</span> R$ {produto.valor.toFixed(2)}</div>
-                      <div><span className="font-semibold text-gray-400">Qtd.:</span> {produto.quantidade}</div>
-                      <div><span className="font-semibold text-gray-400">Total:</span> R$ {produto.total.toFixed(2)}</div>
-                    </div>
-                  </div>
-                </div>
-              ))
+            <div>
+                    {produtos.map((produto, index) => (
+                        // Linha do Produto
+                      <div 
+                        key={index} 
+                        onClick={() => handleRowClick(index)} // Ação de clique na linha
+                        // flex-col para mobile, sm:flex-row para desktop
+                        className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
+                                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}
+                      >
+                        {/* =======================================================
+                            1. LAYOUT DE CARTÃO (MOBILE: sm:hidden)
+                        ======================================================= */}
+                        <div className={`p-4 sm:hidden w-full`}>
+                            {/* Nome do Produto (Destaque) */}
+                            <div className="font-extrabold text-lg mb-2">{produto.nome}</div>
+                            
+                            <div className="grid grid-cols-3 gap-y-1 gap-x-4 text-sm">
+                                
+                                {/* Valor Unitário */}
+                                <div className="flex flex-col">
+                                    <span className="font-semibold text-gray-400">Valor Und.:</span>
+                                    <span className="font-medium">R$ {produto.valor.toFixed(2)}</span>
+                                </div>
+                                
+                                {/* Quantidade */}
+                                <div className="flex flex-col text-center">
+                                    <span className="font-semibold text-gray-400">Qtd.:</span>
+                                    <span className="font-medium">{produto.quantidade}</span>
+                                </div>
+                                
+                                {/* Total do Item (Destaque) */}
+                                <div className="flex flex-col items-end">
+                                    <span className="font-semibold text-gray-400">Total Item:</span>
+                                    <span className="text-lg font-bold text-green-500">R$ {produto.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* =======================================================
+                            2. LAYOUT DE TABELA (DESKTOP: hidden sm:flex)
+                        ======================================================= */}
+                        <div className="hidden sm:flex w-full">
+                            {/* Célula Produto (40%) - ESQUERDA */}
+                            <div className={`px-4 py-3 text-left flex items-center ${COL_NOME}`}>
+                                {produto.nome}
+                            </div>
+                            {/* Célula Valor Und. (20%) - DIREITA */}
+                            <div className={`px-4 py-3 text-right flex items-center justify-end ${COL_VALOR}`}>R$ {produto.valor.toFixed(2)}</div>
+                            {/* Célula Qtd. (20%) - CENTRO */}
+                            <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_QTD}`}>{produto.quantidade}</div>
+                            {/* Célula Total (20%) - DIREITA e Destaque */}
+                            <div className={`px-4 py-3 font-semibold text-right flex items-center justify-end ${COL_TOTAL} text-lg text-green-600 dark:text-green-400`}>R$ {produto.total.toFixed(2)}</div>
+                        </div>
+
+                        {/* POP-UP DE AÇÕES */}
+                        {index === produtoSelecionadoIndex && (
+                            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-4 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
+                                    className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition"
+                                    title="Editar"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteProduto(index); }}
+                                    className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition"
+                                    title="Excluir"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
             )}
           </div>
 
