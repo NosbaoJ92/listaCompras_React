@@ -76,6 +76,7 @@ const SomarValor = ({ onGoHome }) => {
   };
 
   // 🔹 Scanner com seleção automática da câmera principal
+  // 🔹 Scanner com seleção automática da câmera principal
   useEffect(() => {
     if (!leitorAtivo) {
       if (codeReaderRef.current) codeReaderRef.current.reset();
@@ -84,20 +85,24 @@ const SomarValor = ({ onGoHome }) => {
 
     const initScanner = async () => {
       try {
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === "videoinput");
 
-        // Tenta selecionar câmera principal traseira
-        let mainCamera = videoDevices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("traseira"));
-        if (!mainCamera) {
-          mainCamera = videoDevices[videoDevices.length - 0]; // última câmera geralmente traseira
-        }
+        // tenta escolher câmera traseira (mobile)
+        let mainCamera = videoDevices.find(d =>
+          d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("traseira")
+        );
+
+        // fallback: usa a primeira câmera (normalmente frontal no notebook)
+        if (!mainCamera) mainCamera = videoDevices[0];
 
         const constraints = {
           video: {
             deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            facingMode: "environment",
             advanced: [{ focusMode: "continuous" }]
           }
         };
@@ -105,22 +110,37 @@ const SomarValor = ({ onGoHome }) => {
         const codeReader = new BrowserMultiFormatReader();
         codeReaderRef.current = codeReader;
 
-        codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+        const videoElementId = isMobile ? "videoFullscreen" : "video";
+
+        await codeReader.decodeFromConstraints(constraints, videoElementId, (result, err) => {
           if (result) {
             const codigo = result.getText();
             setEan(codigo);
             buscarProdutoPorEan(codigo);
             codeReader.reset();
             setLeitorAtivo(false);
+            if (document.fullscreenElement) document.exitFullscreen();
           }
-        }).catch(err => {
-          console.error("Erro ao acessar a câmera:", err);
-          setErro("Não foi possível acessar a câmera.");
         });
 
+        // modo fullscreen e paisagem apenas no mobile
+        if (isMobile) {
+          const videoEl = document.getElementById(videoElementId);
+          if (videoEl) {
+            if (videoEl.requestFullscreen) await videoEl.requestFullscreen();
+            if (window.screen.orientation && window.screen.orientation.lock) {
+              try {
+                await window.screen.orientation.lock('landscape');
+              } catch {
+                console.warn("Não foi possível travar em modo paisagem.");
+              }
+            }
+          }
+        }
+
       } catch (err) {
-        console.error(err);
-        setErro("Erro ao inicializar o scanner.");
+        console.error("Erro ao inicializar scanner:", err);
+        setErro("Erro ao inicializar o scanner. Verifique as permissões da câmera.");
       }
     };
 
@@ -128,8 +148,14 @@ const SomarValor = ({ onGoHome }) => {
 
     return () => {
       if (codeReaderRef.current) codeReaderRef.current.reset();
+      if (document.fullscreenElement) document.exitFullscreen();
+      if (window.screen.orientation && window.screen.orientation.unlock) {
+        window.screen.orientation.unlock();
+      }
     };
   }, [leitorAtivo]);
+
+
 
   // Adicionar/editar produtos
   const handleAddProduto = () => { 
@@ -284,23 +310,27 @@ const SomarValor = ({ onGoHome }) => {
                 {editandoIndex !== null ? "Editar Produto" : "Adicionar Produto"}
               </h1>
 
-              {leitorAtivo && (
-                <div className="mb-4">
-                  <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
-                    <video
-                      id="video"
-                      className="w-full h-full object-cover"
-                      autoPlay
-                      muted
-                      playsInline
-                      autoFocus
-                    />
-                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none animate-pulse"></div>
-                    <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
-                  </p>
+              {/* Scanner em tela cheia apenas no mobile */}
+              {leitorAtivo && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
+                <div className="fixed inset-0 z-[9999] bg-black flex flex-col justify-center items-center">
+                  <video
+                    id="videoFullscreen"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                  <button
+                    onClick={() => {
+                      setLeitorAtivo(false);
+                      if (codeReaderRef.current) codeReaderRef.current.reset();
+                      if (document.fullscreenElement) document.exitFullscreen();
+                    }}
+                    className="absolute top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-full shadow-lg text-lg font-semibold hover:bg-red-700 transition"
+                  >
+                    ✖ Fechar
+                  </button>
+                  <div className="absolute bottom-10 w-3/4 h-[3px] bg-red-500 animate-pulse opacity-75"></div>
                 </div>
               )}
 
