@@ -1,7 +1,7 @@
 [
-  { "ean": "7894900010015", "nome": "Arroz Tio João 1kg", "valor": 20.50 },
-  { "ean": "7896000010019", "nome": "Feijão Carioca 1kg", "valor": 12.30 },
-  { "ean": "7891010010010", "nome": "Açúcar Refinado 1kg", "valor": 5.90 },
-  { "ean": "7898938890076", "nome": "Energético Monster Zero Açúcar 473ml", "valor": 8.75 },
-   { "ean": "7898654863477", "nome": "Farinha de Aveia Krill 170g", "valor": 5.25 }
+  { "ean": "7894900010015", "nome": "Arroz Tio João 1kg" },
+  { "ean": "7896000010019", "nome": "Feijão Carioca 1kg" },
+  { "ean": "7891010010010", "nome": "Açúcar Refinado 1kg"},
+  { "ean": "7898938890076", "nome": "Energético Monster Zero Açúcar 473ml" },
+   { "ean": "7898654863477", "nome": "Farinha de Aveia Krill 170g"}
 ]
