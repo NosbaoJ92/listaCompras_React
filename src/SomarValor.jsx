@@ -275,24 +275,18 @@ const SomarValor = ({ onGoHome }) => {
                     {index === produtoSelecionadoIndex && (
                       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-4 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
                         <button 
-                                    onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
-                                    className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition"
-                                    title="Editar"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteProduto(index); }}
-                                    className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition"
-                                    title="Excluir"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
+                        onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
+                        className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                            <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteProduto(index); }}className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition" title="Excluir">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -374,7 +368,7 @@ const SomarValor = ({ onGoHome }) => {
                   className="border border-gray-300 rounded-xl p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                 />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
                   <input
                     type="number"
                     placeholder="Valor (R$)"
@@ -399,9 +393,9 @@ const SomarValor = ({ onGoHome }) => {
                   >
                     {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
                   </button>
-
                   <button
                     onClick={() => {
+                      if (leitorAtivo) return; // Evita o clique se o leitor estiver ativo
                       setIsOpen(false);
                       setErro("");
                       setEditandoIndex(null);
@@ -412,9 +406,14 @@ const SomarValor = ({ onGoHome }) => {
                       setLeitorAtivo(false);
                       if (codeReaderRef.current) codeReaderRef.current.reset();
                     }}
-                    className="flex-1 bg-gray-500 text-white font-semibold rounded-xl py-2.5 hover:bg-gray-600 active:scale-95 transition-all shadow-sm"
+                    disabled={leitorAtivo}
+                    className={`flex-1 font-semibold rounded-xl py-2.5 transition-all shadow-sm ${
+                      leitorAtivo
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-red-600 text-white hover:bg-red-700 active:scale-95"
+                    }`}
                   >
-                    Cancelar
+                    {leitorAtivo ? "Leitor Ativo..." : "Cancelar"}
                   </button>
                 </div>
               </div>
