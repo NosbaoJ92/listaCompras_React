@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import TelaInicial from './TelaInicial';
-import AdicionarProduto from './AdicionarProduto';
+import SomarValor from './SomarValor';
 import ValorDefinido from './ValorDefinido';
 import ValorMaximo from './ValorMaximo';
 import { ThemeProvider, useTheme } from './ThemeContext';
@@ -38,7 +38,7 @@ const AppContent = () => {
       )}
 
       {option === 'somar' && (
-        <AdicionarProduto 
+        <SomarValor 
             onGoHome={handleGoHome}
             modoNoturno={modoNoturno} 
             onToggleModoNoturno={toggleModoNoturno}
