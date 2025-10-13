@@ -77,34 +77,47 @@ const SomarValor = ({ onGoHome }) => {
 
   // 🔹 Scanner
   useEffect(() => {
-    if (!leitorAtivo) {
-      if (codeReaderRef.current) codeReaderRef.current.reset();
-      return;
-    }
+  if (!leitorAtivo) {
+    if (codeReaderRef.current) codeReaderRef.current.reset();
+    return;
+  }
 
-    const codeReader = new BrowserMultiFormatReader();
-    codeReaderRef.current = codeReader;
+  const codeReader = new BrowserMultiFormatReader();
+  codeReaderRef.current = codeReader;
 
-    codeReader.listVideoInputDevices()
-      .then((devices) => {
-        if (devices.length > 0) {
-          codeReader.decodeFromVideoDevice(devices[0].deviceId, "video", (result, err) => {
-            if (result) {
-              const codigo = result.getText();
-              setEan(codigo);
-              buscarProdutoPorEan(codigo);
-              codeReader.reset();
-              setLeitorAtivo(false);
-            }
-          });
-        } else {
-          setErro("Nenhuma câmera encontrada.");
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const constraints = {
+    video: isMobile
+      ? {
+          facingMode: { exact: "environment" }, // câmera traseira
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          focusMode: "continuous" // tenta habilitar autofoco contínuo
         }
-      })
-      .catch((err) => console.error(err));
+      : {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+  };
 
-    return () => codeReader.reset();
-  }, [leitorAtivo]);
+  codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+    if (result) {
+      const codigo = result.getText();
+      setEan(codigo);
+      buscarProdutoPorEan(codigo);
+      codeReader.reset();
+      setLeitorAtivo(false);
+    }
+  }).catch(err => {
+    console.error("Erro ao acessar a câmera:", err);
+    setErro("Não foi possível acessar a câmera.");
+  });
+
+  return () => codeReader.reset();
+}, [leitorAtivo]);
+
+
 
   const handleAddProduto = () => { 
     if (!nomeProduto || !valorProduto || !quantidadeProduto) {
