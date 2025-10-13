@@ -88,18 +88,18 @@ const SomarValor = ({ onGoHome }) => {
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const constraints = {
-    video: isMobile
+  video: {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    ...(isMobile
       ? {
-          facingMode: { exact: "environment" }, // câmera traseira
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          focusMode: "continuous" // tenta habilitar autofoco contínuo
+          facingMode: { exact: "environment" }, // traseira
         }
-      : {
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-  };
+      : {}),
+    advanced: [{ focusMode: "continuous" }], // foco contínuo, só funciona em alguns dispositivos
+  },
+};
+
 
   codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
     if (result) {
@@ -275,7 +275,14 @@ const SomarValor = ({ onGoHome }) => {
               {leitorAtivo && (
                 <div className="mb-4">
                   <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
-                    <video id="video" className="w-full h-full object-cover" autoPlay muted />
+                    <video
+                      id="video"
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      muted
+                      playsInline
+                      autoFocus // tente forçar
+                    />
                     
                     {/* Linha vermelha central */}
                     <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none"></div>
