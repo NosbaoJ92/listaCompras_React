@@ -318,24 +318,90 @@ const SomarValor = ({ onGoHome }) => {
               )}
 
               <div className="flex flex-col gap-4 mb-4">
-                <input type="number" placeholder="EAN do Produto" value={ean} onChange={(e) => setEan(e.target.value)} className="col-span-2 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                
-                <div className="mb-4 flex text-sm justify-between w-full gap-2">
-                  <button onClick={() => buscarProdutoPorEan(ean)} className="bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full">Buscar</button>
-                  <button onClick={() => setLeitorAtivo(!leitorAtivo)} className={`px-4 py-2 rounded-lg transition  w-full ${leitorAtivo ? "bg-red-600 text-white hover:bg-red-700" : "bg-green-600 text-white hover:bg-green-700"}`}>
-                    {leitorAtivo ? "Parar Leitura" : "Ler código"}
+                {/* Campo EAN */}
+                <input
+                  type="number"
+                  placeholder="EAN do Produto"
+                  value={ean}
+                  onChange={(e) => setEan(e.target.value)}
+                  className="border border-gray-300 rounded-xl p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                />
+
+                {/* Botões: Buscar e Ler Código */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => buscarProdutoPorEan(ean)}
+                    className="flex-1 bg-blue-600 text-white font-semibold rounded-xl py-2.5 hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                  >
+                    Buscar
+                  </button>
+
+                  <button
+                    onClick={() => setLeitorAtivo(!leitorAtivo)}
+                    className={`flex-1 font-semibold rounded-xl py-2.5 shadow-sm transition-all active:scale-95 ${
+                      leitorAtivo
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                    }`}
+                  >
+                    {leitorAtivo ? "Parar Leitura" : "Ler Código"}
                   </button>
                 </div>
 
-                <input type="text" placeholder="Nome do Produto" value={nomeProduto} onChange={(e) => setNomeProduto(e.target.value)} className="col-span-3 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                <input type="number" placeholder="Valor (R$)" value={valorProduto} onChange={(e) => setValorProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
-                <input type="number" placeholder="Quantidade" value={quantidadeProduto} onChange={(e) => setQuantidadeProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+                {/* Campos de informações */}
+                <input
+                  type="text"
+                  placeholder="Nome do Produto"
+                  value={nomeProduto}
+                  onChange={(e) => setNomeProduto(e.target.value)}
+                  className="border border-gray-300 rounded-xl p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                />
 
-                <div className="mb-4 flex w-full text-sm gap-2 justify-between">
-                  <button onClick={handleAddProduto} className="bg-blue-600 text-white w-full font-semibold rounded-lg hover:bg-blue-700 transition">{editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}</button>
-                  <button onClick={() => { setIsOpen(false); setErro(""); setEditandoIndex(null); setEan(""); setNomeProduto(""); setValorProduto(""); setQuantidadeProduto(""); setLeitorAtivo(false); if(codeReaderRef.current) codeReaderRef.current.reset(); }} className="bg-red-600 text-white font-semibold w-full rounded-lg hover:bg-red-700 transition">Cancelar</button>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <input
+                    type="number"
+                    placeholder="Valor (R$)"
+                    value={valorProduto}
+                    onChange={(e) => setValorProduto(e.target.value)}
+                    className="border border-gray-300 rounded-xl p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Quantidade"
+                    value={quantidadeProduto}
+                    onChange={(e) => setQuantidadeProduto(e.target.value)}
+                    className="border border-gray-300 rounded-xl p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                {/* Botões: Adicionar/Atualizar e Cancelar */}
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={handleAddProduto}
+                    className="flex-1 bg-blue-600 text-white font-semibold rounded-xl py-2.5 hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                  >
+                    {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setErro("");
+                      setEditandoIndex(null);
+                      setEan("");
+                      setNomeProduto("");
+                      setValorProduto("");
+                      setQuantidadeProduto("");
+                      setLeitorAtivo(false);
+                      if (codeReaderRef.current) codeReaderRef.current.reset();
+                    }}
+                    className="flex-1 bg-gray-500 text-white font-semibold rounded-xl py-2.5 hover:bg-gray-600 active:scale-95 transition-all shadow-sm"
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </div>
+
 
               {erro && <p className="text-red-500 font-medium mt-2">{erro}</p>}
             </div>
