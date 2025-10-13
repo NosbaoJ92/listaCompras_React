@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useTheme } from './ThemeContext'; 
 import { BrowserMultiFormatReader } from "@zxing/library";
-
+import produtosBR from './produtosBR.json';
 
 const COL_NOME = "w-2/5";
 const COL_VALOR = "w-1/5";
@@ -24,7 +24,7 @@ const SomarValor = ({ onGoHome }) => {
   const { modoNoturno, toggleModoNoturno } = useTheme(); 
 
   const [leitorAtivo, setLeitorAtivo] = useState(false);
-  const [scanner, setScanner] = useState(null);
+  const codeReaderRef = useRef(null);
 
   useEffect(() => {
     const produtosSalvos = localStorage.getItem("produtos");
@@ -35,7 +35,6 @@ const SomarValor = ({ onGoHome }) => {
     localStorage.setItem("produtos", JSON.stringify(produtos));
   }, [produtos]);
 
-  // 🔍 Função para buscar produto na API EANData
   const buscarProdutoPorEan = async (codigoEan) => {
     if (!codigoEan) {
       setErro("Informe um código EAN válido.");
@@ -43,8 +42,16 @@ const SomarValor = ({ onGoHome }) => {
       return;
     }
 
+    const produtoLocal = produtosBR.find(p => p.ean === codigoEan);
+    if (produtoLocal) {
+      setNomeProduto(produtoLocal.nome);
+      setValorProduto(produtoLocal.valor.toString());
+      setErro("");
+      return;
+    }
+
     try {
-      const apiKey = "4210726968ED3C18"; // substitua pela sua key do eandata.com
+      const apiKey = "4210726968ED3C18";
       const url = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -68,15 +75,17 @@ const SomarValor = ({ onGoHome }) => {
     }
   };
 
+  // 🔹 Scanner
   useEffect(() => {
-  if (!isOpen) return;
+    if (!leitorAtivo) {
+      if (codeReaderRef.current) codeReaderRef.current.reset();
+      return;
+    }
 
-  const codeReader = new BrowserMultiFormatReader();
-  const videoElement = document.getElementById("video");
+    const codeReader = new BrowserMultiFormatReader();
+    codeReaderRef.current = codeReader;
 
-  if (videoElement) {
-    codeReader
-      .listVideoInputDevices()
+    codeReader.listVideoInputDevices()
       .then((devices) => {
         if (devices.length > 0) {
           codeReader.decodeFromVideoDevice(devices[0].deviceId, "video", (result, err) => {
@@ -84,16 +93,18 @@ const SomarValor = ({ onGoHome }) => {
               const codigo = result.getText();
               setEan(codigo);
               buscarProdutoPorEan(codigo);
-              codeReader.reset(); // para parar a leitura após detectar
+              codeReader.reset();
+              setLeitorAtivo(false);
             }
           });
+        } else {
+          setErro("Nenhuma câmera encontrada.");
         }
       })
       .catch((err) => console.error(err));
-  }
 
-  return () => codeReader.reset();
-}, [isOpen]);
+    return () => codeReader.reset();
+  }, [leitorAtivo]);
 
   const handleAddProduto = () => { 
     if (!nomeProduto || !valorProduto || !quantidadeProduto) {
@@ -127,6 +138,7 @@ const SomarValor = ({ onGoHome }) => {
     setErro('');
     setIsOpen(false);
     setProdutoSelecionadoIndex(null);
+    setLeitorAtivo(false);
   };
 
   const handleEditProduto = (index) => {
@@ -145,13 +157,7 @@ const SomarValor = ({ onGoHome }) => {
     setProdutoSelecionadoIndex(null);
   };
 
-  const calcularTotalCompra = () => {
-    return produtos.reduce((acc, produto) => acc + produto.total, 0);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleAddProduto();
-  };
+  const calcularTotalCompra = () => produtos.reduce((acc, produto) => acc + produto.total, 0);
 
   const handleRowClick = (index) => {
     setProdutoSelecionadoIndex(index === produtoSelecionadoIndex ? null : index);
@@ -169,12 +175,7 @@ const SomarValor = ({ onGoHome }) => {
       `R$ ${p.total.toFixed(2)}`
     ]);
 
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20
-    });
-
+    doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
     const totalCompra = calcularTotalCompra().toFixed(2);
     const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 30; 
     doc.text(`Total da Compra: R$ ${totalCompra}`, 10, finalY + 10);
@@ -183,8 +184,6 @@ const SomarValor = ({ onGoHome }) => {
 
   return (
     <div className={`min-h-screen p-6 relative flex flex-col ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-
-      {/* Botões fixos */}
       <button onClick={onGoHome} className="fixed top-4 left-4 z-50 p-3 rounded-full shadow-lg transition duration-300 bg-white text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">🏠</button>
       <button onClick={toggleModoNoturno} className="fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg transition duration-300 bg-white text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
         {modoNoturno ? '☀️' : '🌙'}
@@ -202,22 +201,46 @@ const SomarValor = ({ onGoHome }) => {
                 <p>Clique em <b>'+ Adicionar Produto'</b> para começar!</p>
               </div>
             ) : (
-              produtos.map((produto, index) => (
-                <div 
-                  key={index} 
-                  onClick={() => handleRowClick(index)}
-                  className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
-                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}>
-                  <div className={`p-4 sm:hidden w-full`}>
-                    <div className="font-extrabold text-lg mb-2">{produto.nome}</div>
-                    <div className="grid grid-cols-3 gap-y-1 gap-x-4 text-sm">
-                      <div><span className="font-semibold text-gray-400">Valor Und.:</span> R$ {produto.valor.toFixed(2)}</div>
-                      <div><span className="font-semibold text-gray-400">Qtd.:</span> {produto.quantidade}</div>
-                      <div><span className="font-semibold text-gray-400">Total:</span> R$ {produto.total.toFixed(2)}</div>
+              <div>
+                {produtos.map((produto, index) => (
+                  <div key={index} onClick={() => handleRowClick(index)}
+                    className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
+                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}>
+                    {/* Mobile layout */}
+                    <div className={`p-4 sm:hidden w-full`}>
+                      <div className="font-extrabold text-lg mb-2">{produto.nome}</div>
+                      <div className="grid grid-cols-3 gap-y-1 gap-x-4 text-sm">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-400">Valor Und.:</span>
+                          <span className="font-medium">R$ {produto.valor.toFixed(2)}</span>
+                        </div>
+                        <div className="flex flex-col text-center">
+                          <span className="font-semibold text-gray-400">Qtd.:</span>
+                          <span className="font-medium">{produto.quantidade}</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="font-semibold text-gray-400">Total Item:</span>
+                          <span className="text-lg font-bold text-green-500">R$ {produto.total.toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
+                    {/* Desktop layout */}
+                    <div className="hidden sm:flex w-full">
+                      <div className={`px-4 py-3 text-left flex items-center ${COL_NOME}`}>{produto.nome}</div>
+                      <div className={`px-4 py-3 text-right flex items-center justify-end ${COL_VALOR}`}>R$ {produto.valor.toFixed(2)}</div>
+                      <div className={`px-4 py-3 text-center flex items-center justify-center ${COL_QTD}`}>{produto.quantidade}</div>
+                      <div className={`px-4 py-3 font-semibold text-right flex items-center justify-end ${COL_TOTAL} text-lg text-green-600 dark:text-green-400`}>R$ {produto.total.toFixed(2)}</div>
+                    </div>
+
+                    {index === produtoSelecionadoIndex && (
+                      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-4 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
+                        <button onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition" title="Editar">✏️</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteProduto(index); }} className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition" title="Excluir">🗑️</button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
@@ -228,119 +251,56 @@ const SomarValor = ({ onGoHome }) => {
           )}
         </div>
 
-        {/* Modal de adicionar/editar produto */}
+        {/* Modal */}
         {isOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-                <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg dark:bg-gray-800">
-                <h1 className="text-2xl font-bold mb-6 text-white">
-                    {editandoIndex !== null ? "Editar Produto" : "Adicionar Produto"}
-                </h1>
-                {/* Área de leitura (aparece só quando leitor ativo) */}
-                {leitorAtivo && (
-                    <div className="mb-4">
-                        <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
-                            <video
-                            id="video"
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            muted
-                            />
-                        <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                        Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
-                    </p>
-                    </div>
-                )}
+          <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg dark:bg-gray-800">
+              <h1 className="text-2xl font-bold mb-6 text-white">
+                {editandoIndex !== null ? "Editar Produto" : "Adicionar Produto"}
+              </h1>
 
-                <div className="flex flex-col gap-4 mb-4">
-                    <input
-                    type="number"
-                    placeholder="EAN do Produto"
-                    value={ean}
-                    onChange={(e) => setEan(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && buscarProdutoPorEan(ean)}
-                    className="col-span-2 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
-                    />
-                    
-                    <div className="mb-4 flex text-sm justify-between w-full gap-2">
-                        <button
-                        onClick={() => buscarProdutoPorEan(ean)}
-                        className="bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full"
-                        >
-                        Buscar
-                        </button>
-                        <button
-                        onClick={() => setLeitorAtivo(!leitorAtivo)}
-                        className={`px-4 py-2 rounded-lg transition  w-full ${
-                            leitorAtivo
-                            ? "bg-red-600 text-white hover:bg-red-700"
-                            : "bg-green-600 text-white hover:bg-green-700"
-                        }`}
-                        >
-                        {leitorAtivo ? "Parar Leitura" : "Ler código"}
-                        </button>
-                    </div>
-                    <input
-                    type="text"
-                    placeholder="Nome do Produto"
-                    value={nomeProduto}
-                    onChange={(e) => setNomeProduto(e.target.value)}
-                    className="col-span-3 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
-                    />
-                    <input
-                    type="number"
-                    placeholder="Valor (R$)"
-                    value={valorProduto}
-                    onChange={(e) => setValorProduto(e.target.value)}
-                    className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
-                    />
-                    <input
-                    type="number"
-                    placeholder="Quantidade"
-                    value={quantidadeProduto}
-                    onChange={(e) => setQuantidadeProduto(e.target.value)}
-                    className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100"
-                    />
-                    <div className="mb-4 flex w-full text-sm gap-2 justify-between">
-                        <button
-                        onClick={handleAddProduto}
-                        className="bg-blue-600 text-white w-full font-semibold rounded-lg  hover:bg-blue-700 transition"
-                        >
-                        {editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}
-                        </button>
-                        <button
-                        onClick={() => {
-                            setIsOpen(false);
-                            setErro("");
-                            setEditandoIndex(null);
-                            setEan("");
-                            setNomeProduto("");
-                            setValorProduto("");
-                            setQuantidadeProduto("");
-                            setLeitorAtivo(false);
-                            if (scanner) scanner.reset();
-                        }}
-                        className="bg-red-600 text-white font-semibold w-full rounded-lg  hover:bg-red-700 transition"
-                        >
-                        Cancelar
-                        </button>
-                    </div>
-                    
+              {leitorAtivo && (
+                <div className="mb-4">
+                  <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
+                    <video id="video" className="w-full h-full object-cover" autoPlay muted />
+                    <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
+                  </p>
                 </div>
-                {erro && <p className="text-red-500 font-medium mt-2">{erro}</p>}
+              )}
+
+              <div className="flex flex-col gap-4 mb-4">
+                <input type="number" placeholder="EAN do Produto" value={ean} onChange={(e) => setEan(e.target.value)} className="col-span-2 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+                
+                <div className="mb-4 flex text-sm justify-between w-full gap-2">
+                  <button onClick={() => buscarProdutoPorEan(ean)} className="bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full">Buscar</button>
+                  <button onClick={() => setLeitorAtivo(!leitorAtivo)} className={`px-4 py-2 rounded-lg transition  w-full ${leitorAtivo ? "bg-red-600 text-white hover:bg-red-700" : "bg-green-600 text-white hover:bg-green-700"}`}>
+                    {leitorAtivo ? "Parar Leitura" : "Ler código"}
+                  </button>
                 </div>
+
+                <input type="text" placeholder="Nome do Produto" value={nomeProduto} onChange={(e) => setNomeProduto(e.target.value)} className="col-span-3 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+                <input type="number" placeholder="Valor (R$)" value={valorProduto} onChange={(e) => setValorProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+                <input type="number" placeholder="Quantidade" value={quantidadeProduto} onChange={(e) => setQuantidadeProduto(e.target.value)} className="col-span-3 sm:col-span-1 border border-gray-300 rounded-lg p-3 text-gray-700 dark:bg-gray-700 dark:text-gray-100" />
+
+                <div className="mb-4 flex w-full text-sm gap-2 justify-between">
+                  <button onClick={handleAddProduto} className="bg-blue-600 text-white w-full font-semibold rounded-lg hover:bg-blue-700 transition">{editandoIndex !== null ? "Atualizar Produto" : "Adicionar Produto"}</button>
+                  <button onClick={() => { setIsOpen(false); setErro(""); setEditandoIndex(null); setEan(""); setNomeProduto(""); setValorProduto(""); setQuantidadeProduto(""); setLeitorAtivo(false); if(codeReaderRef.current) codeReaderRef.current.reset(); }} className="bg-red-600 text-white font-semibold w-full rounded-lg hover:bg-red-700 transition">Cancelar</button>
+                </div>
+              </div>
+
+              {erro && <p className="text-red-500 font-medium mt-2">{erro}</p>}
             </div>
-            )}
-      </div>
+          </div>
+        )}
 
-      <div className="container mx-auto max-w-4xl flex justify-between items-center w-full mt-4">
-        <button
-          onClick={() => { setIsOpen(true); setEditandoIndex(null); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold"
-        >
-          + Adicionar Novo Produto
-        </button>
+        <div className="container mx-auto max-w-4xl flex justify-between items-center w-full mt-4">
+          <button onClick={() => { setIsOpen(true); setEditandoIndex(null); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+            + Adicionar Novo Produto
+          </button>
+        </div>
       </div>
     </div>
   );
