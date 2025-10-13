@@ -90,14 +90,14 @@ const SomarValor = ({ onGoHome }) => {
         // Tenta selecionar câmera principal traseira
         let mainCamera = videoDevices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("traseira"));
         if (!mainCamera) {
-          mainCamera = videoDevices[videoDevices.length - 0 || 1 || 2 || 3]; // última câmera geralmente traseira
+          mainCamera = videoDevices[videoDevices.length - 0]; // última câmera geralmente traseira
         }
 
         const constraints = {
           video: {
             deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
             advanced: [{ focusMode: "continuous" }]
           }
         };
