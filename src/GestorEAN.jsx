@@ -1,13 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
-
-// ✅ Pega valor inicial do localStorage direto no estado
-const getInitialModoNoturno = () => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("modoNoturno") === "true";
-  }
-  return false;
-};
+import { useTheme } from './ThemeContext';
 
 const GestorEAN = ({ onGoHome }) => {
   const [ean, setEan] = useState("");
@@ -16,20 +9,22 @@ const GestorEAN = ({ onGoHome }) => {
   const [leitorAtivo, setLeitorAtivo] = useState(false);
   const [produtosColetados, setProdutosColetados] = useState([]);
   const [erro, setErro] = useState("");
-  const [modoNoturno, setModoNoturno] = useState(getInitialModoNoturno); // ✅ inicializa com localStorage
-
   const codeReaderRef = useRef(null);
 
-  // ✅ Aplica a classe dark no html sempre que mudar o modo
+  // 🔹 Tema via contexto
+  const { modoNoturno, toggleModoNoturno } = useTheme();
+
+  // 🔹 Persistência dos produtos no localStorage
   useEffect(() => {
-    localStorage.setItem("modoNoturno", modoNoturno);
-    if (modoNoturno) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [modoNoturno]);
+    const produtosSalvos = localStorage.getItem("produtosColetados");
+    if (produtosSalvos) setProdutosColetados(JSON.parse(produtosSalvos));
+  }, []);
 
-  const toggleModoNoturno = () => setModoNoturno(prev => !prev);
+  useEffect(() => {
+    localStorage.setItem("produtosColetados", JSON.stringify(produtosColetados));
+  }, [produtosColetados]);
 
-  // Inicia scanner
+  // 🔹 Scanner
   useEffect(() => {
     if (!leitorAtivo) {
       if (codeReaderRef.current) codeReaderRef.current.reset();
@@ -83,7 +78,6 @@ const GestorEAN = ({ onGoHome }) => {
     };
   }, [leitorAtivo]);
 
-  // Adiciona produto
   const handleAddProduto = () => {
     if (!ean || !nomeProduto || !valorProduto) {
       setErro("Preencha todos os campos!");
@@ -103,7 +97,6 @@ const GestorEAN = ({ onGoHome }) => {
     setValorProduto("");
   };
 
-  // Envia produtos para MockAPI
   const handleEnviarMockAPI = async () => {
     try {
       for (const produto of produtosColetados) {
@@ -145,16 +138,14 @@ const GestorEAN = ({ onGoHome }) => {
           Coletor de Produtos - Gestor
         </h1>
 
-        {/* Scanner */}
         {leitorAtivo && (
           <div className="mb-4 relative w-full max-w-md mx-auto">
-            <video id="video" className="w-full h-full object-cover" autoPlay muted />
+            <video id="video" className="w-full h-64 object-cover" autoPlay muted />
             <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none"></div>
             <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
           </div>
         )}
 
-        {/* Inputs Manuais */}
         <div className="max-w-md mx-auto flex flex-col gap-3">
           <input
             type="text"
@@ -198,12 +189,9 @@ const GestorEAN = ({ onGoHome }) => {
 
         {erro && <p className="text-red-500 text-center mt-2">{erro}</p>}
 
-        {/* Lista de produtos coletados */}
         {produtosColetados.length > 0 && (
           <div className="mt-6 max-w-md mx-auto bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
-            <h2 className="text-xl font-bold mb-2">
-              Produtos Coletados
-            </h2>
+            <h2 className="text-xl font-bold mb-2">Produtos Coletados</h2>
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {produtosColetados.map((p, i) => (
                 <li key={i} className="py-2 flex justify-between">
