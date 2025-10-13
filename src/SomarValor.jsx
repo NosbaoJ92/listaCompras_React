@@ -22,10 +22,10 @@ const SomarValor = ({ onGoHome }) => {
   const [produtoSelecionadoIndex, setProdutoSelecionadoIndex] = useState(null);
 
   const { modoNoturno, toggleModoNoturno } = useTheme(); 
-
   const [leitorAtivo, setLeitorAtivo] = useState(false);
   const codeReaderRef = useRef(null);
 
+  // Persistência de produtos
   useEffect(() => {
     const produtosSalvos = localStorage.getItem("produtos");
     if (produtosSalvos) setProdutos(JSON.parse(produtosSalvos));
@@ -35,6 +35,7 @@ const SomarValor = ({ onGoHome }) => {
     localStorage.setItem("produtos", JSON.stringify(produtos));
   }, [produtos]);
 
+  // Buscar produto pelo EAN
   const buscarProdutoPorEan = async (codigoEan) => {
     if (!codigoEan) {
       setErro("Informe um código EAN válido.");
@@ -60,7 +61,6 @@ const SomarValor = ({ onGoHome }) => {
         const produto = data.product;
         const nome = produto.attributes?.product || produto.title || "Produto não identificado";
         const preco = produto.attributes?.price || "";
-
         setNomeProduto(nome);
         if (preco) setValorProduto(preco.toString());
         setErro("");
@@ -75,50 +75,61 @@ const SomarValor = ({ onGoHome }) => {
     }
   };
 
-  // 🔹 Scanner
+  // 🔹 Scanner com seleção automática da câmera principal
   useEffect(() => {
-  if (!leitorAtivo) {
-    if (codeReaderRef.current) codeReaderRef.current.reset();
-    return;
-  }
-
-  const codeReader = new BrowserMultiFormatReader();
-  codeReaderRef.current = codeReader;
-
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const constraints = {
-  video: {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    ...(isMobile
-      ? {
-          facingMode: { exact: "environment" }, // traseira
-        }
-      : {}),
-    advanced: [{ focusMode: "continuous" }], // foco contínuo, só funciona em alguns dispositivos
-  },
-};
-
-
-  codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
-    if (result) {
-      const codigo = result.getText();
-      setEan(codigo);
-      buscarProdutoPorEan(codigo);
-      codeReader.reset();
-      setLeitorAtivo(false);
+    if (!leitorAtivo) {
+      if (codeReaderRef.current) codeReaderRef.current.reset();
+      return;
     }
-  }).catch(err => {
-    console.error("Erro ao acessar a câmera:", err);
-    setErro("Não foi possível acessar a câmera.");
-  });
 
-  return () => codeReader.reset();
-}, [leitorAtivo]);
+    const initScanner = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
 
+        // Tenta selecionar câmera principal traseira
+        let mainCamera = videoDevices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("traseira"));
+        if (!mainCamera) mainCamera = videoDevices[0]; // fallback
 
+        const constraints = {
+          video: {
+            deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: "continuous" }]
+          }
+        };
 
+        const codeReader = new BrowserMultiFormatReader();
+        codeReaderRef.current = codeReader;
+
+        codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+          if (result) {
+            const codigo = result.getText();
+            setEan(codigo);
+            buscarProdutoPorEan(codigo);
+            codeReader.reset();
+            setLeitorAtivo(false);
+          }
+        }).catch(err => {
+          console.error("Erro ao acessar a câmera:", err);
+          setErro("Não foi possível acessar a câmera.");
+        });
+
+      } catch (err) {
+        console.error(err);
+        setErro("Erro ao inicializar o scanner.");
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      if (codeReaderRef.current) codeReaderRef.current.reset();
+    };
+  }, [leitorAtivo]);
+
+  // Adicionar/editar produtos
   const handleAddProduto = () => { 
     if (!nomeProduto || !valorProduto || !quantidadeProduto) {
       setErro('Por favor, preencha todos os campos.');
@@ -171,11 +182,11 @@ const SomarValor = ({ onGoHome }) => {
   };
 
   const calcularTotalCompra = () => produtos.reduce((acc, produto) => acc + produto.total, 0);
-
   const handleRowClick = (index) => {
     setProdutoSelecionadoIndex(index === produtoSelecionadoIndex ? null : index);
   };
 
+  // Gerar PDF
   const gerarPDF = () => {
     const doc = new jsPDF();
     doc.text("Relatório de gestão de compras", 10, 10);
@@ -187,7 +198,6 @@ const SomarValor = ({ onGoHome }) => {
       p.quantidade,
       `R$ ${p.total.toFixed(2)}`
     ]);
-
     doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
     const totalCompra = calcularTotalCompra().toFixed(2);
     const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 30; 
@@ -281,16 +291,11 @@ const SomarValor = ({ onGoHome }) => {
                       autoPlay
                       muted
                       playsInline
-                      autoFocus // tente forçar
+                      autoFocus
                     />
-                    
-                    {/* Linha vermelha central */}
-                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none pulse-red"></div>
-
-                    {/* Borda do scanner (opcional) */}
+                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none animate-pulse"></div>
                     <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
                   </div>
-
                   <p className="text-xs text-gray-400 mt-2">
                     Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
                   </p>
@@ -372,7 +377,6 @@ const SomarValor = ({ onGoHome }) => {
                   </button>
                 </div>
               </div>
-
 
               {erro && <p className="text-red-500 font-medium mt-2">{erro}</p>}
             </div>
