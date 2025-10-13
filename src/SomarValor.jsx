@@ -42,14 +42,34 @@ const SomarValor = ({ onGoHome }) => {
       return;
     }
 
+    // 1️⃣ Busca no JSON local
     const produtoLocal = produtosBR.find(p => p.ean === codigoEan);
     if (produtoLocal) {
       setNomeProduto(produtoLocal.nome);
-      setValorProduto(produtoLocal.valor.toString());
+      setValorProduto(produtoLocal.valor ? produtoLocal.valor.toString() : "");
       setErro("");
       return;
     }
 
+    // 2️⃣ Busca na MockAPI
+    try {
+      const mockApiUrl = "https://YOUR_MOCKAPI_URL/produtos"; // <=== Substitua pelo seu endpoint
+      const response = await fetch(`${mockApiUrl}?ean=${codigoEan}`);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const produtoMock = data[0];
+        setNomeProduto(produtoMock.nome);
+        // Caso queira adicionar valor fictício ao buscar pelo MockAPI
+        setValorProduto(produtoMock.valor ? produtoMock.valor.toString() : "0");
+        setErro("");
+        return;
+      }
+    } catch (err) {
+      console.error("Erro ao consultar MockAPI:", err);
+    }
+
+    // 3️⃣ Busca no EANData (caso queira manter)
     try {
       const apiKey = "4210726968ED3C18";
       const url = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
@@ -65,7 +85,7 @@ const SomarValor = ({ onGoHome }) => {
         if (preco) setValorProduto(preco.toString());
         setErro("");
       } else {
-        setErro("Produto não encontrado no EANData.");
+        setErro("Produto não encontrado.");
         setTimeout(() => setErro(""), 1500);
       }
     } catch (err) {
@@ -74,6 +94,7 @@ const SomarValor = ({ onGoHome }) => {
       setTimeout(() => setErro(""), 1500);
     }
   };
+
 
   // 🔹 Scanner
     useEffect(() => {
