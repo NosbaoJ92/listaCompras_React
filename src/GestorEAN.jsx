@@ -26,23 +26,42 @@ const GestorEAN = () => {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === "videoinput");
 
-        const mainCamera = videoDevices[0];
+        // 🔹 Tenta encontrar câmeras traseiras
+        const backCameras = videoDevices.filter(d =>
+          /back|rear|environment|traseira/i.test(d.label)
+        );
+
+        // Seleciona a principal
+        let mainCamera;
+        if (backCameras.length >= 2) {
+          mainCamera = backCameras[1]; // geralmente a traseira principal
+        } else if (backCameras.length === 1) {
+          mainCamera = backCameras[0];
+        } else {
+          mainCamera = videoDevices.length > 0 ? videoDevices[0] : null;
+        }
+
         if (!mainCamera) throw new Error("Nenhuma câmera disponível.");
 
-        await codeReader.decodeFromConstraints(
-          { video: { deviceId: { exact: mainCamera.deviceId } } },
-          "video",
-          (result, err) => {
-            if (result) {
-              const codigo = result.getText();
-              setEan(codigo);
-              setLeitorAtivo(false);
-            }
+        const constraints = {
+          video: {
+            deviceId: { exact: mainCamera.deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            advanced: [{ focusMode: "continuous" }],
+          },
+        };
+
+        await codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+          if (result) {
+            const codigo = result.getText();
+            setEan(codigo);
+            setLeitorAtivo(false);
           }
-        );
+        });
       } catch (err) {
         console.error(err);
-        setErro("Erro ao acessar a câmera.");
+        setErro("Erro ao acessar a câmera. Verifique permissões ou tente outra câmera.");
       }
     };
 
