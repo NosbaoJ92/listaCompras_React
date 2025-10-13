@@ -89,7 +89,7 @@ const SomarValor = ({ onGoHome }) => {
 
         // Tenta selecionar câmera principal traseira
         let mainCamera = videoDevices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("traseira"));
-        if (!mainCamera) mainCamera = videoDevices[0]; // fallback
+        if (!mainCamera) mainCamera = videoDevices[1]; // fallback
 
         const constraints = {
           video: {
