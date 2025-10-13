@@ -276,8 +276,14 @@ const SomarValor = ({ onGoHome }) => {
                 <div className="mb-4">
                   <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
                     <video id="video" className="w-full h-full object-cover" autoPlay muted />
+                    
+                    {/* Linha vermelha central */}
+                    <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none"></div>
+
+                    {/* Borda do scanner (opcional) */}
                     <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
                   </div>
+
                   <p className="text-xs text-gray-400 mt-2">
                     Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
                   </p>
