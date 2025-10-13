@@ -16,6 +16,7 @@
     "@heroicons/react": "^2.1.5",
     "@mui/icons-material": "^6.0.1",
     "@mui/material": "^6.0.1",
+    "@zxing/library": "^0.21.3",
     "font-awesome": "^4.7.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
