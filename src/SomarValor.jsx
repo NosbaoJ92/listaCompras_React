@@ -76,46 +76,78 @@ const SomarValor = ({ onGoHome }) => {
   };
 
   // 🔹 Scanner
-  useEffect(() => {
-  if (!leitorAtivo) {
-    if (codeReaderRef.current) codeReaderRef.current.reset();
-    return;
-  }
+  // 🔹 Scanner Aprimorado para Múltiplas Câmeras
+  useEffect(() => {
+      if (!leitorAtivo) {
+        if (codeReaderRef.current) codeReaderRef.current.reset();
+        return;
+      }
 
-  const codeReader = new BrowserMultiFormatReader();
-  codeReaderRef.current = codeReader;
+      const initScanner = async () => {
+        try {
+          const codeReader = new BrowserMultiFormatReader();
+          codeReaderRef.current = codeReader;
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(d => d.kind === "videoinput");
+          
+          // 1. Tenta encontrar a câmera traseira principal (a melhor tentativa)
+          let mainCamera = videoDevices.find(d => 
+            // Palavras-chave em inglês e português
+            d.label.toLowerCase().includes("back") || 
+            d.label.toLowerCase().includes("traseira") ||
+            d.label.toLowerCase().includes("environment")
+          );
 
-  const constraints = {
-  video: {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    ...(isMobile
-      ? {
-          facingMode: { exact: "environment" }, // traseira
-        }
-      : {}),
-    advanced: [{ focusMode: "continuous" }], // foco contínuo, só funciona em alguns dispositivos
-  },
-};
+          // 2. Se não encontrou por nome, tenta a última câmera da lista (geralmente é a principal)
+          if (!mainCamera && videoDevices.length > 0) {
+            mainCamera = videoDevices[videoDevices.length - 1]; 
+          }
 
+          // 3. Monta as restrições com foco em alta performance
+          const constraints = {
+            video: {
+              // Se identificamos uma câmera por ID, usamos a restrição "exact"
+              deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
+              
+              // Se não, tentamos a restrição padrão "environment" para a câmera traseira
+              facingMode: mainCamera ? undefined : { exact: "environment" },
+              
+              // Alta resolução para melhor reconhecimento
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              
+              // Foco contínuo (essencial para códigos de barras)
+              advanced: [{ focusMode: "continuous" }]
+            }
+          };
 
-  codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
-    if (result) {
-      const codigo = result.getText();
-      setEan(codigo);
-      buscarProdutoPorEan(codigo);
-      codeReader.reset();
-      setLeitorAtivo(false);
-    }
-  }).catch(err => {
-    console.error("Erro ao acessar a câmera:", err);
-    setErro("Não foi possível acessar a câmera.");
-  });
+          // Inicia a decodificação
+          codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+            if (result) {
+              const codigo = result.getText();
+              setEan(codigo);
+              buscarProdutoPorEan(codigo);
+              codeReader.reset();
+              setLeitorAtivo(false);
+            }
+          }).catch(err => {
+            console.error("Erro ao acessar a câmera:", err);
+            setErro("Não foi possível acessar a câmera ou o dispositivo de vídeo não foi encontrado.");
+          });
 
-  return () => codeReader.reset();
-}, [leitorAtivo]);
+        } catch (err) {
+          console.error(err);
+          setErro("Erro ao inicializar o scanner. Verifique as permissões de câmera.");
+        }
+      };
+
+      initScanner();
+
+      return () => {
+        if (codeReaderRef.current) codeReaderRef.current.reset();
+      };
+    }, [leitorAtivo]);
 
 
 
