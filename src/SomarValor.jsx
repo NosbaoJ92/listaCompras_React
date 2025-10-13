@@ -76,46 +76,73 @@ const SomarValor = ({ onGoHome }) => {
   };
 
   // 🔹 Scanner
-  useEffect(() => {
-  if (!leitorAtivo) {
-    if (codeReaderRef.current) codeReaderRef.current.reset();
-    return;
-  }
-
-  const codeReader = new BrowserMultiFormatReader();
-  codeReaderRef.current = codeReader;
-
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const constraints = {
-  video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    ...(isMobile
-      ? {
-          facingMode: { exact: "environment" }, // traseira
-        }
-      : {}),
-    advanced: [{ focusMode: "continuous" }], // foco contínuo, só funciona em alguns dispositivos
-  },
-};
-
-
-  codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
-    if (result) {
-      const codigo = result.getText();
-      setEan(codigo);
-      buscarProdutoPorEan(codigo);
-      codeReader.reset();
-      setLeitorAtivo(false);
+    useEffect(() => {
+    if (!leitorAtivo) {
+      if (codeReaderRef.current) codeReaderRef.current.reset();
+      return;
     }
-  }).catch(err => {
-    console.error("Erro ao acessar a câmera:", err);
-    setErro("Não foi possível acessar a câmera.");
-  });
 
-  return () => codeReader.reset();
-}, [leitorAtivo]);
+    const initScanner = async () => {
+      try {
+        const codeReader = new BrowserMultiFormatReader();
+        codeReaderRef.current = codeReader;
+
+        // Lista todas as câmeras
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+
+        console.log("Câmeras detectadas:", videoDevices.map(d => d.label));
+
+        // 🔍 tenta achar câmeras traseiras
+        const backCameras = videoDevices.filter(d =>
+          /back|rear|environment|traseira/i.test(d.label)
+        );
+
+        // 🎯 Se houver mais de uma, tenta a segunda (geralmente a traseira principal)
+        let mainCamera;
+        if (backCameras.length >= 2) {
+          mainCamera = backCameras[1];
+        } else if (backCameras.length === 1) {
+          mainCamera = backCameras[0];
+        } else {
+          // fallback para a segunda câmera se disponível
+          mainCamera = videoDevices.length > 0 ? videoDevices[0] : videoDevices[1];
+        }
+
+        if (!mainCamera) throw new Error("Nenhuma câmera disponível.");
+
+        const constraints = {
+          video: {
+            deviceId: { exact: mainCamera.deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            advanced: [{ focusMode: "continuous" }]
+          }
+        };
+
+        await codeReader.decodeFromConstraints(constraints, "video", (result, err) => {
+          if (result) {
+            const codigo = result.getText();
+            setEan(codigo);
+            buscarProdutoPorEan(codigo);
+            codeReader.reset();
+            setLeitorAtivo(false);
+          }
+        });
+
+      } catch (err) {
+        console.error("Erro ao acessar a câmera:", err);
+        setErro("Erro ao acessar a câmera. Verifique as permissões ou tente outra câmera.");
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      if (codeReaderRef.current) codeReaderRef.current.reset();
+    };
+  }, [leitorAtivo]);
+
 
 
 
