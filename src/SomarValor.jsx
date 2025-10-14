@@ -43,44 +43,61 @@ const SomarValor = ({ onGoHome }) => {
     }
 
     try {
-      // 1️⃣ Busca no EANData
+      // 🔹 1️⃣ Tenta buscar no EANData
       const apiKey = "4210726968ED3C18";
       const urlEanData = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
       const responseEan = await fetch(urlEanData);
       const dataEan = await responseEan.json();
 
-      if (dataEan && dataEan.product) {
-        const produto = dataEan.product;
-        const nome = produto.attributes?.product || produto.title || "Produto não identificado";
-        const preco = produto.attributes?.price || "";
+      // Valida se a resposta tem produto real
+      const produtoValido =
+        dataEan &&
+        dataEan.product &&
+        (dataEan.product.title || dataEan.product.attributes?.product);
+
+      if (produtoValido) {
+        const nome =
+          dataEan.product.attributes?.product ||
+          dataEan.product.title ||
+          "Produto não identificado";
+
+        const preco =
+          dataEan.product.attributes?.price ||
+          dataEan.product.attributes?.msrp ||
+          "";
+
         setNomeProduto(nome);
         setValorProduto(preco ? preco.toString() : "0");
         setErro("");
-        return; // produto encontrado no EANData
+        return; // ✅ Encontrado no EANData
       }
 
-      // 2️⃣ Busca no MockAPI
+      // 🔹 2️⃣ Caso não tenha encontrado no EANData, tenta no MockAPI
       const mockApiUrl = "https://68ed848edf2025af780067e3.mockapi.io/gestor/produtos";
       const responseMock = await fetch(`${mockApiUrl}?ean=${codigoEan}`);
       const dataMock = await responseMock.json();
 
-      if (dataMock && dataMock.length > 0) {
+      if (Array.isArray(dataMock) && dataMock.length > 0) {
         const produtoMock = dataMock[0];
         setNomeProduto(produtoMock.nome);
         setValorProduto(produtoMock.valor ? produtoMock.valor.toString() : "0");
         setErro("");
-        return; // produto encontrado no MockAPI
+        return; // ✅ Encontrado no MockAPI
       }
 
-      // 3️⃣ Produto não encontrado
+      // 🔹 3️⃣ Nenhum produto encontrado nas duas fontes
       setErro("Produto não encontrado.");
+      setNomeProduto("");
+      setValorProduto("");
       setTimeout(() => setErro(""), 2000);
+
     } catch (err) {
-      console.error("Erro ao consultar EAN:", err);
+      console.error("Erro ao consultar produto:", err);
       setErro("Erro ao consultar o produto. Tente novamente.");
       setTimeout(() => setErro(""), 2000);
     }
   };
+
 
 
 
