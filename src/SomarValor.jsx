@@ -42,58 +42,46 @@ const SomarValor = ({ onGoHome }) => {
       return;
     }
 
-    // 1️⃣ Busca no JSON local
-    const produtoLocal = produtosBR.find(p => p.ean === codigoEan);
-    if (produtoLocal) {
-      setNomeProduto(produtoLocal.nome);
-      setValorProduto(produtoLocal.valor ? produtoLocal.valor.toString() : "");
-      setErro("");
-      return;
-    }
-
-    // 2️⃣ Busca na MockAPI
     try {
-      const mockApiUrl = "https://YOUR_MOCKAPI_URL/produtos"; // <=== Substitua pelo seu endpoint
-      const response = await fetch(`${mockApiUrl}?ean=${codigoEan}`);
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        const produtoMock = data[0];
-        setNomeProduto(produtoMock.nome);
-        // Caso queira adicionar valor fictício ao buscar pelo MockAPI
-        setValorProduto(produtoMock.valor ? produtoMock.valor.toString() : "0");
-        setErro("");
-        return;
-      }
-    } catch (err) {
-      console.error("Erro ao consultar MockAPI:", err);
-    }
-
-    // 3️⃣ Busca no EANData (caso queira manter)
-    try {
+      // 1️⃣ Busca no EANData
       const apiKey = "4210726968ED3C18";
-      const url = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const urlEanData = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
+      const responseEan = await fetch(urlEanData);
+      const dataEan = await responseEan.json();
 
-      if (data && data.product) {
-        const produto = data.product;
+      if (dataEan && dataEan.product) {
+        const produto = dataEan.product;
         const nome = produto.attributes?.product || produto.title || "Produto não identificado";
         const preco = produto.attributes?.price || "";
-
         setNomeProduto(nome);
-        if (preco) setValorProduto(preco.toString());
+        setValorProduto(preco ? preco.toString() : "0");
         setErro("");
-      } else {
-        setErro("Produto não encontrado.");
-        setTimeout(() => setErro(""), 1500);
+        return; // produto encontrado no EANData
       }
+
+      // 2️⃣ Busca no MockAPI
+      const mockApiUrl = "https://68ed848edf2025af780067e3.mockapi.io/gestor/produtos";
+      const responseMock = await fetch(`${mockApiUrl}?ean=${codigoEan}`);
+      const dataMock = await responseMock.json();
+
+      if (dataMock && dataMock.length > 0) {
+        const produtoMock = dataMock[0];
+        setNomeProduto(produtoMock.nome);
+        setValorProduto(produtoMock.valor ? produtoMock.valor.toString() : "0");
+        setErro("");
+        return; // produto encontrado no MockAPI
+      }
+
+      // 3️⃣ Produto não encontrado
+      setErro("Produto não encontrado.");
+      setTimeout(() => setErro(""), 2000);
     } catch (err) {
-      console.error(err);
-      setErro("Erro ao consultar o EANData.");
-      setTimeout(() => setErro(""), 1500);
+      console.error("Erro ao consultar EAN:", err);
+      setErro("Erro ao consultar o produto. Tente novamente.");
+      setTimeout(() => setErro(""), 2000);
     }
   };
+
 
 
   // 🔹 Scanner
