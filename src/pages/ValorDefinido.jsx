@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 
 // Definições de Largura OTIMIZADAS (para manter a consistência visual)
 const COL_NOME = "w-2/5"; // 40%
@@ -10,14 +11,14 @@ const COL_TOTAL = "w-1/5"; // 20%
 
 // O componente agora recebe modoNoturno e onToggleModoNoturno via props
 const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
-    
+
     // 1. Inicializa o valor pré-definido lendo do localStorage
     const getInitialValorPreDefinido = () => {
         return localStorage.getItem("valorPreDefinido") || '';
     };
 
     const initialValorPreDefinido = getInitialValorPreDefinido();
-    
+
     // ESTADOS
     const [produtos, setProdutos] = useState([]);
     const [nomeProduto, setNomeProduto] = useState('');
@@ -26,12 +27,18 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
     const [valorPreDefinido, setValorPreDefinido] = useState(initialValorPreDefinido);
     const [erro, setErro] = useState('');
     const [editandoIndex, setEditandoIndex] = useState(null);
-    const [isPDFMenuOpen, setIsPDFMenuOpen] = useState(false);
     const [produtoSelecionadoIndex, setProdutoSelecionadoIndex] = useState(null);
-    
+
     // isBudgetEditing inicializa como TRUE se valorPreDefinido for vazio
-    const [isBudgetEditing, setIsBudgetEditing] = useState(initialValorPreDefinido === ''); 
-    const [isModalOpen, setIsModalOpen] = useState(false); 
+    const [isBudgetEditing, setIsBudgetEditing] = useState(initialValorPreDefinido === '');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // ESTADOS PARA O SCANNER/EAN
+    const [ean, setEan] = useState("");
+    const [leitorAtivo, setLeitorAtivo] = useState(false);
+    const codeReaderRef = useRef(null);
+    const videoRef = useRef(null); // Referência para o elemento de vídeo (scanner)
+
 
     // EFEITOS (Carregar/Salvar)
     useEffect(() => {
@@ -49,26 +56,157 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
         localStorage.setItem("valorPreDefinido", valorPreDefinido);
     }, [valorPreDefinido]);
 
+
+    // --------------------------------------------------------
+    // FUNÇÕES DO SCANNER/EAN 
+    // --------------------------------------------------------
+
+    const handleScanClick = () => {
+        if (leitorAtivo) {
+            // Desativar
+            if (codeReaderRef.current) {
+                codeReaderRef.current.reset();
+            }
+            setLeitorAtivo(false);
+        } else {
+            // Ativar
+            setEan('');
+            setErro('');
+            setLeitorAtivo(true);
+        }
+    };
+
+    const handleSearchEan = async (codigoEanExterno) => {
+        const codigoEan = codigoEanExterno || ean;
+
+        if (!codigoEan) {
+            setErro("Informe um código EAN válido.");
+            setTimeout(() => setErro(""), 1500);
+            return;
+        }
+
+        // Limpa campos para evitar confusão de dados antigos
+        setNomeProduto("");
+        setValorProduto("");
+
+
+        try {
+            // 🔹 1️⃣ Tenta buscar no EANData
+            const apiKey = "4210726968ED3C18"; // Chave de API fixa
+            const urlEanData = `https://eandata.com/feed/?v=3&keycode=${apiKey}&mode=json&find=${codigoEan}`;
+            const responseEan = await fetch(urlEanData);
+            const dataEan = await responseEan.json();
+
+            // Valida se a resposta tem produto real
+            const produtoValido =
+                dataEan &&
+                dataEan.product &&
+                (dataEan.product.title || dataEan.product.attributes?.product);
+
+            if (produtoValido) {
+                const nome =
+                    dataEan.product.attributes?.product ||
+                    dataEan.product.title ||
+                    "Produto não identificado";
+
+                const preco =
+                    dataEan.product.attributes?.price ||
+                    dataEan.product.attributes?.msrp ||
+                    "";
+
+                setNomeProduto(nome);
+                setValorProduto(preco ? preco.toString() : "0");
+                
+                setTimeout(() => setErro(""), 2000);
+                return; // ✅ Encontrado no EANData
+            }
+
+            // 🔹 2️⃣ Caso não tenha encontrado no EANData, tenta no MockAPI
+            const mockApiUrl = "https://68ed848edf2025af780067e3.mockapi.io/gestor/produtos";
+            const responseMock = await fetch(`${mockApiUrl}?ean=${codigoEan}`);
+            const dataMock = await responseMock.json();
+
+            if (Array.isArray(dataMock) && dataMock.length > 0) {
+                const produtoMock = dataMock[0];
+                setNomeProduto(produtoMock.nome);
+                setValorProduto(produtoMock.valor ? produtoMock.valor.toString() : "0");
+               
+                setTimeout(() => setErro(""), 2000);
+                return; // ✅ Encontrado no MockAPI
+            }
+
+            // 🔹 3️⃣ Nenhum produto encontrado nas duas fontes
+            setErro("Produto não encontrado. Preencha manualmente.");
+            setNomeProduto("");
+            setValorProduto("");
+            setTimeout(() => setErro(""), 3000);
+
+        } catch (err) {
+            console.error("Erro ao consultar produto:", err);
+            setErro("Erro ao consultar o produto. Tente novamente.");
+            setTimeout(() => setErro(""), 3000);
+        }
+    };
+
+
+    // EFEITO: Lógica do Scanner
+    useEffect(() => {
+        if (leitorAtivo && videoRef.current) {
+            // Inicializa o leitor apenas se não estiver inicializado
+            if (!codeReaderRef.current) {
+                codeReaderRef.current = new BrowserMultiFormatReader();
+            }
+
+            // Inicia a leitura do código de barras
+            codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+                if (result) {
+                    const capturedEan = result.getText();
+                    setEan(capturedEan);
+                    
+                    // Chama handleSearchEan com o EAN capturado para iniciar a busca
+                    handleSearchEan(capturedEan); 
+                    
+                    // Desativa o leitor após a leitura
+                    handleScanClick(); 
+
+                }
+                if (err && !(err instanceof NotFoundException)) {
+                    // console.error(err);
+                }
+            });
+
+            // Parar o leitor ao sair do modo de leitura
+            return () => {
+                if (codeReaderRef.current) {
+                    codeReaderRef.current.reset();
+                }
+            };
+        }
+    }, [leitorAtivo]);
+    
+    // --------------------------------------------------------
+    // FIM DAS FUNÇÕES DO SCANNER/EAN
+    // --------------------------------------------------------
+
+
     // HANDLERS
     const handleSetBudget = (novoValor) => {
         const valorNumerico = parseFloat(novoValor.replace(',', '.'));
 
         if (!isNaN(valorNumerico) && valorNumerico >= 0) {
             setValorPreDefinido(novoValor);
-            setIsBudgetEditing(false); 
+            setIsBudgetEditing(false);
         } else {
             setErro('Por favor, insira um valor numérico positivo.');
             setTimeout(() => setErro(''), 3000);
         }
     };
-    
-    // FUNÇÃO CORRIGIDA: Implementa a checagem de orçamento máximo
+
     const handleOpenModal = (index = null) => {
         // --- BLOQUEIO DE ADIÇÃO SEM ORÇAMENTO ---
-        // Se o usuário está tentando ADICIONAR (index === null) E o orçamento está vazio, bloqueie.
         if (index === null && !valorPreDefinido) {
             setErro('Por favor, defina o "Orçamento Máximo" antes de adicionar um produto.');
-            setTimeout(() => setErro(''), 5000); 
+            setTimeout(() => setErro(''), 5000);
             return; // Bloqueia a abertura do modal
         }
         // --- FIM DO BLOQUEIO ---
@@ -79,36 +217,53 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
             setValorProduto(produto.valor.toString());
             setQuantidadeProduto(produto.quantidade.toString());
             setEditandoIndex(index);
+            setEan('');
         } else {
             setNomeProduto('');
             setValorProduto('');
             setQuantidadeProduto('');
             setEditandoIndex(null);
+            setEan('');
         }
+
+        // DESATIVA SCANNER AO ABRIR MODAL se estiver ativo
+        if (leitorAtivo) {
+            handleScanClick();
+        }
+
         setErro('');
         setIsModalOpen(true);
     };
 
+    // FUNÇÃO CORRIGIDA/ATUALIZADA: Desativa o scanner e limpa estados ao fechar
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setNomeProduto('');
         setValorProduto('');
         setQuantidadeProduto('');
         setEditandoIndex(null);
+        setEan(''); // Limpar EAN
+        
+        // Desliga o scanner se estiver ativo (handleScanClick já tem a lógica de reset)
+        if (leitorAtivo) { 
+            handleScanClick(); 
+        }
+
+        setErro(''); // Limpa o erro também ao fechar
     };
 
     const handleAddProduto = () => {
-        // PRIMEIRA VALIDAÇÃO: Checa se algum campo está vazio (string vazia '')
+        // PRIMEIRA VALIDAÇÃO: Checa se algum campo está vazio
         if (!nomeProduto || !valorProduto || !quantidadeProduto) {
             setErro('Por favor, preencha todos os campos.');
             setTimeout(() => setErro(''), 3000);
             return;
         }
 
-        const novoValor = parseFloat(valorProduto.replace(',', '.')); 
+        const novoValor = parseFloat(valorProduto.replace(',', '.'));
         const novaQtd = parseInt(quantidadeProduto);
 
-        // SEGUNDA VALIDAÇÃO: Checa se os valores são numéricos e maiores que zero (positivo e definido).
+        // SEGUNDA VALIDAÇÃO: Checa se os valores são numéricos e maiores que zero
         if (isNaN(novoValor) || isNaN(novaQtd) || novoValor <= 0 || novaQtd <= 0) {
             setErro('Valores e quantidade devem ser números positivos válidos (maiores que zero).');
             setTimeout(() => setErro(''), 3000);
@@ -130,13 +285,13 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
         } else {
             setProdutos([...produtos, novoProduto]);
         }
-        
-        handleCloseModal(); 
+
+        handleCloseModal();
         setProdutoSelecionadoIndex(null);
     };
 
     const handleEditProduto = (index) => {
-        setProdutoSelecionadoIndex(null); 
+        setProdutoSelecionadoIndex(null);
         handleOpenModal(index);
     };
 
@@ -163,11 +318,11 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
     // Limpa tudo (produtos e valor pré-definido)
     const handleClearAll = () => {
         const confirmClear = window.confirm("Tem certeza de que deseja limpar a lista de produtos E o valor do orçamento? Esta ação é irreversível.");
-        
+
         if (confirmClear) {
-            setProdutos([]); 
+            setProdutos([]);
             setValorPreDefinido('');
-            setIsBudgetEditing(true); 
+            setIsBudgetEditing(true);
             localStorage.removeItem("produtosDefinido");
             localStorage.removeItem("valorPreDefinido");
 
@@ -177,90 +332,44 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
         }
     };
 
-    // FUNÇÕES DE PDF (Mantidas)
-    const gerarPDF = () => {
-        try {
-            const doc = new jsPDF();
-            doc.text("Relatório de Subtração de Valor Pré-Definido", 10, 10);
-            const tableColumn = ["Nome", "Valor Unitário", "Quantidade", "Total"];
-            const tableRows = produtos.map((produto) => [
-                produto.nome,
-                `R$ ${produto.valor.toFixed(2)}`,
-                produto.quantidade,
-                `R$ ${produto.total.toFixed(2)}`
-            ]);
-            doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
-            const totalCompra = calcularTotalCompra().toFixed(2);
-            const valorRestante = (parseFloat(valorPreDefinido || 0) - parseFloat(totalCompra)).toFixed(2);
-            const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 30;
-            doc.setFontSize(12);
-            doc.text(`Total da Compra: R$ ${totalCompra}`, 10, finalY + 10);
-            doc.text(`Valor Pré-Definido: R$ ${parseFloat(valorPreDefinido || 0).toFixed(2)}`, 10, finalY + 18);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(valorRestante >= 0 ? 34 : 255, valorRestante >= 0 ? 139 : 0, 34);
-            doc.text(`Valor Restante: R$ ${valorRestante}`, 10, finalY + 26);
-            doc.save('valor-predefinido-relatorio.pdf');
-            setIsPDFMenuOpen(false);
-        } catch (error) {
-            console.error("Erro ao gerar PDF:", error);
-            alert("Erro ao gerar PDF. Verifique as bibliotecas 'jspdf' e 'jspdf-autotable'.");
-        }
+    // FUNÇÕES DE PDF (Simuladas)
+    const gerarPDF = () => { 
+        setErro("Simulação de Geração de PDF Detalhado...");
+        setTimeout(() => setErro(""), 3000);
     };
-
-    const gerarPDFSimplesParaImpressao = () => {
-        try {
-            const doc = new jsPDF();
-            doc.text(`Lista de Compras para o Limite: R$ ${parseFloat(valorPreDefinido || 0).toFixed(2)}`, 10, 10);
-            doc.setFontSize(12);
-            const tableColumn = ["Item", "Quantidade", "Marcar"];
-            const tableRows = produtos.map((produto) => [
-                produto.nome,
-                produto.quantidade,
-                "(    )"
-            ]);
-            doc.autoTable({
-                head: [tableColumn],
-                body: tableRows,
-                startY: 20,
-                styles: { fontSize: 10 },
-                columnStyles: {
-                    1: { cellWidth: 30, halign: 'center' },
-                    2: { cellWidth: 30, halign: 'center' }
-                }
-            });
-            doc.output('dataurlnewwindow');
-            setIsPDFMenuOpen(false);
-        } catch (error) {
-            console.error("Erro ao gerar PDF Simples:", error);
-            alert("Erro ao gerar PDF Simples. Verifique as bibliotecas 'jspdf' e 'jspdf-autotable'.");
-        }
+    const gerarPDFSimplesParaImpressao = () => { 
+        setErro("Simulação de Geração de PDF Simples...");
+        setTimeout(() => setErro(""), 3000);
     };
 
     const totalCompraCalculado = calcularTotalCompra().toFixed(2);
     const valorRestanteCalculado = (parseFloat(valorPreDefinido || 0) - parseFloat(totalCompraCalculado)).toFixed(2);
     const isOverBudget = valorRestanteCalculado < 0;
 
+    // Classe condicional para os inputs do modal
+    const inputModalClasses = `border rounded-lg p-3 w-full text-base focus:ring-blue-500 focus:border-blue-500 
+                              ${modoNoturno ? 'bg-gray-700 text-gray-100 border-gray-600' : 'bg-white text-gray-900 border-gray-300'}`;
+
     // --- RENDERIZAÇÃO DO COMPONENTE ---
     return (
-        // O container principal usa flex-col para empilhar o header e o conteúdo rolável
         <div className={`min-h-screen relative flex flex-col transition-colors duration-500 ${modoNoturno ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-            
+
             {/* Botões fixos (Home/Tema) */}
             {onGoHome && (
-                <button 
+                <button
                     onClick={onGoHome}
                     className="fixed top-4 left-4 z-50 p-3 rounded-full shadow-lg transition duration-300 text-sm font-semibold
-                                             bg-white text-gray-800 hover:bg-gray-200 
-                                             dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                        bg-white text-gray-800 hover:bg-gray-200
+                                        dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                 >
                     🏠
                 </button>
             )}
-            <button 
+            <button
                 onClick={onToggleModoNoturno}
                 className="fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg transition duration-300 text-sm font-semibold
-                                             bg-white text-gray-800 hover:bg-gray-200 
-                                             dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                        bg-white text-gray-800 hover:bg-gray-200
+                                        dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
             >
                 {modoNoturno ? '☀️' : '🌙'}
             </button>
@@ -275,16 +384,16 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                     {/* Seção de Valor Pré-Definido (Fixo/Editável) */}
                     <div className={`p-4 rounded-xl shadow-lg border-2 mb-4 ${isOverBudget ? 'border-red-500' : 'border-blue-500'} ${modoNoturno ? 'bg-gray-800' : 'bg-white'}`}>
                         <div className="flex justify-between items-center mb-3">
-                             <label className="text-lg font-semibold">Orçamento Máximo (R$)</label>
-                             {/* Botão de Editar visível apenas fora do modo de edição */}
-                             {!isBudgetEditing && (
-                                 <button
-                                     onClick={() => setIsBudgetEditing(true)}
-                                     className="bg-orange-500 text-white font-semibold rounded-lg p-2 px-4 text-sm hover:bg-orange-600 transition"
-                                 >
-                                     Editar
-                                 </button>
-                             )}
+                            <label className="text-lg font-semibold">Orçamento Máximo (R$)</label>
+                            {/* Botão de Editar visível apenas fora do modo de edição */}
+                            {!isBudgetEditing && (
+                                <button
+                                    onClick={() => setIsBudgetEditing(true)}
+                                    className="bg-orange-500 text-white font-semibold rounded-lg p-2 px-4 text-sm hover:bg-orange-600 transition"
+                                >
+                                    Editar
+                                </button>
+                            )}
                         </div>
 
                         {isBudgetEditing ? (
@@ -316,7 +425,7 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
 
             {/* Conteúdo que ROLA (Tabela, Botões e Totais Finais) */}
             <div className="container mx-auto max-w-4xl px-6 flex-grow overflow-y-auto mt-2 ">
-                
+
                 {/* Mensagem de Erro (Fica fixa, se houver) */}
                 {erro && (
                     <div className={`p-3 mb-4 rounded-lg font-semibold text-center ${erro.includes('Orçamento') ? 'bg-yellow-400 text-gray-900' : 'bg-red-500 text-white'}`}>
@@ -328,7 +437,7 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                 <div className={`p-4 mb-4 rounded-xl shadow-lg overflow-y-scroll max-h-96 border ${modoNoturno ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     {/* CABEÇALHO DA TABELA (Desktop/Tablet) */}
                     <div className="hidden sm:block border-b-2 border-gray-300 dark:border-gray-600">
-                        <div className="flex uppercase text-sm font-bold w-full"> 
+                        <div className="flex uppercase text-sm font-bold w-full">
                             <div className={`px-4 py-3 text-left ${COL_NOME}`}>Produto</div>
                             <div className={`px-4 py-3 text-right ${COL_VALOR}`}>Valor Und.</div>
                             <div className={`px-4 py-3 text-center ${COL_QTD}`}>Qtd.</div>
@@ -346,11 +455,11 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                         ) : (
                             <div>
                                 {produtos.map((produto, index) => (
-                                    <div 
-                                        key={index} 
+                                    <div
+                                        key={index}
                                         onClick={() => handleRowClick(index)}
                                         className={`flex flex-col sm:flex-row border-b dark:border-gray-700 transition duration-100 cursor-pointer w-full relative
-                                                    ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}
+                                                        ${index === produtoSelecionadoIndex ? 'bg-blue-100/50 dark:bg-blue-900/70' : (index % 2 === 0 ? ' ' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50')}`}
                                     >
                                         {/* LAYOUT MOBILE (Detalhes do Cartão) */}
                                         <div className={`p-4 sm:hidden w-full`}>
@@ -382,8 +491,8 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                                         {/* POP-UP DE AÇÕES */}
                                         {index === produtoSelecionadoIndex && (
                                             <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex gap-2 z-20 p-4 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-900/70 shadow-md">
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }} 
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleEditProduto(index); }}
                                                     className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition"
                                                     title="Editar"
                                                 >
@@ -404,7 +513,7 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                         )}
                     </div>
                 </div>
-                
+
                 {/* Botões de Ação da Tabela */}
                 <div className="p-4 mb-6 text-center flex flex-col sm:flex-row justify-center gap-4">
                     <button
@@ -416,52 +525,35 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                 </div>
 
                 {/* Saldo Restante e Total de Compras */}
-                    <div className={`p-4 rounded-xl shadow-lg border-2 mb-6 ${isOverBudget ? 'border-red-500 bg-red-100/30 dark:bg-red-900/40' : 'border-green-500 bg-green-100/30 dark:bg-green-900/40'} font-bold`}>
-                         <div className="flex justify-between items-center mb-2 border-b pb-2 border-gray-300 dark:border-gray-600">
-                             <h3 className="text-xl">Total de Compras:</h3>
-                             <span className="text-2xl text-green-600 dark:text-green-400">R$ {totalCompraCalculado}</span>
-                         </div>
-                         <div className="flex justify-between items-center pt-2">
-                             <h3 className="text-2xl">Saldo Restante:</h3>
-                             <span className={`text-3xl ${isOverBudget ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
-                                 R$ {valorRestanteCalculado}
-                             </span>
-                         </div>
+                <div className={`p-4 rounded-xl shadow-lg border-2 mb-6 ${isOverBudget ? 'border-red-500 bg-red-100/30 dark:bg-red-900/40' : 'border-green-500 bg-green-100/30 dark:bg-green-900/40'} font-bold`}>
+                    <div className="flex justify-between items-center mb-2 border-b pb-2 border-gray-300 dark:border-gray-600">
+                        <h3 className="text-xl">Total de Compras:</h3>
+                        <span className="text-2xl text-green-600 dark:text-green-400">R$ {totalCompraCalculado}</span>
                     </div>
-                
+                    <div className="flex justify-between items-center pt-2">
+                        <h3 className="text-2xl">Saldo Restante:</h3>
+                        <span className={`text-3xl ${isOverBudget ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                            R$ {valorRestanteCalculado}
+                        </span>
+                    </div>
+                </div>
+
                 {/* Rodapé da Página: Botões de PDF e Limpar Tudo */}
                 <div className="flex flex-col sm:flex-row justify-between w-full mt-4 pb-6 gap-4">
-                    {/* Botões de PDF (Agrupados à esquerda ou no centro se não houver Limpar) */}
-                    {/* {produtos.length > 0 && (
-                        <div className="relative flex justify-center sm:justify-start w-full sm:w-auto">
-                            <button 
-                                onClick={() => setIsPDFMenuOpen(!isPDFMenuOpen)} 
-                                className="bg-green-600 text-white font-semibold rounded-lg p-3 hover:bg-green-700 transition flex items-center w-full sm:w-auto"
-                            >
-                                Opções de Impressão (PDF)
-                                <svg className={`w-4 h-4 ml-2 transition-transform ${isPDFMenuOpen ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-
-                            {isPDFMenuOpen && (
-                                <div className={`absolute bottom-full right-0 mb-2 w-64 rounded-lg shadow-xl py-2 z-30 ${modoNoturno ? 'bg-gray-700 text-gray-100' : 'bg-white text-gray-800'} border border-gray-300 dark:border-gray-600`}>
-                                    <button
-                                        onClick={gerarPDF}
-                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                    >
-                                        📥 **Download** (Relatório Completo)
-                                    </button>
-                                    <button
-                                        onClick={gerarPDFSimplesParaImpressao}
-                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 border-t border-gray-200 dark:border-gray-600"
-                                    >
-                                        🖨️ **Imprimir** (Lista Simples / Checklist)
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )} */}
-                    
-                    {/* Botão Limpar Tudo (Fixo à direita ou embaixo em mobile) */}
+                    {/* <div className="flex gap-4">
+                        <button
+                            onClick={gerarPDF}
+                            className="bg-gray-500 text-white font-semibold rounded-lg p-3 px-8 hover:bg-gray-600 transition shadow-lg w-full sm:w-auto"
+                        >
+                            Exportar PDF
+                        </button>
+                        <button
+                            onClick={gerarPDFSimplesParaImpressao}
+                            className="bg-gray-500 text-white font-semibold rounded-lg p-3 px-8 hover:bg-gray-600 transition shadow-lg w-full sm:w-auto"
+                        >
+                            Imprimir
+                        </button>
+                    </div> */}
                     <button
                         onClick={handleClearAll}
                         className="bg-red-500 text-white font-semibold rounded-lg p-3 px-8 hover:bg-red-600 transition shadow-lg w-full sm:w-auto mt-4 sm:mt-0"
@@ -470,66 +562,117 @@ const ValorDefinido = ({ onGoHome, modoNoturno, onToggleModoNoturno }) => {
                     </button>
                 </div>
             </div>
-            
-            {/* Modal de Adicionar/Editar Produto (ESTILO ATUALIZADO) */}
+
+            {/* MODAL DE ADICIONAR/EDITAR PRODUTO */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-                    <div className={`rounded-xl p-8 w-full max-w-md shadow-2xl 
-                        bg-gray-800 text-gray-100 
-                    `}>
-                        <h2 className="text-2xl font-bold mb-6 text-white">
+                    <div className={`rounded-xl p-8 w-full max-w-md shadow-2xl ${modoNoturno ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}`}>
+                        {/* Título */}
+                        <h2 className={`text-2xl font-bold mb-6 text-center ${modoNoturno ? 'text-gray-100' : 'text-gray-900'}`}>
                             {editandoIndex !== null ? 'Editar Produto' : 'Adicionar Produto'}
                         </h2>
-                        
+
+                        {leitorAtivo && (
+                        <div className="mb-4">
+                            <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden">
+                                <video ref={videoRef} className="w-full h-full object-cover" autoPlay autoFocus focusMode muted />
+                                
+                                {/* Linha vermelha central */}
+                                <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 transform -translate-y-1/2 pointer-events-none"></div>
+
+                                {/* Borda do scanner (opcional) */}
+                                <div className="absolute inset-0 border-4 border-green-500 opacity-60 pointer-events-none"></div>
+                            </div>
+
+                            <p className="text-xs text-gray-400 mt-2">
+                                Aponte a câmera para o código de barras (EAN). O preenchimento será automático.
+                            </p>
+                        </div>
+                        )}
+
                         <div className="space-y-4">
+                            {/* 1. EAN INPUT (Full Width) */}
+                            <input
+                                type="text"
+                                placeholder="EAN do Produto"
+                                value={ean}
+                                onChange={(e) => setEan(e.target.value)}
+                                disabled={leitorAtivo}
+                                className={inputModalClasses} // Classe condicional aplicada
+                            />
+
+                            {/* 2. BOTÕES DE AÇÃO DO EAN (Lado a Lado) */}
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => handleSearchEan(ean)} 
+                                    className="bg-blue-600 text-white font-semibold rounded-lg p-3 w-1/2 hover:bg-blue-700 transition shadow-md"
+                                >
+                                    Buscar
+                                </button>
+                                <button
+                                    onClick={handleScanClick}
+                                    className={`font-semibold rounded-lg p-3 w-1/2 transition shadow-md
+                                        ${leitorAtivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'} text-white
+                                    `}
+                                >
+                                    {leitorAtivo ? 'Parar Leitor' : 'Ler Código'}
+                                </button>
+                            </div>
+                            
+                            {/* 3. NOME DO PRODUTO (Full Width) */}
                             <input
                                 type="text"
                                 placeholder="Nome do Produto"
                                 value={nomeProduto}
                                 onChange={(e) => setNomeProduto(e.target.value)}
-                                className={`border border-gray-600 rounded-lg p-3 w-full 
-                                    bg-gray-700 text-gray-100 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500
-                                `}
+                                className={inputModalClasses} // Classe condicional aplicada
                             />
-                            <input
-                                type="number"
-                                placeholder="Valor (R$)"
-                                value={valorProduto}
-                                onChange={(e) => setValorProduto(e.target.value)}
-                                className={`border border-gray-600 rounded-lg p-3 w-full 
-                                    bg-gray-700 text-gray-100 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500
-                                `}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Quantidade"
-                                value={quantidadeProduto}
-                                onChange={(e) => setQuantidadeProduto(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                className={`border border-gray-600 rounded-lg p-3 w-full 
-                                    bg-gray-700 text-gray-100 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500
-                                `}
-                            />
+
+                            {/* 4. VALOR E QUANTIDADE (Lado a Lado) */}
+                            <div className="flex gap-4">
+                                <input
+                                    type="number"
+                                    placeholder="Valor (R$)"
+                                    value={valorProduto}
+                                    onChange={(e) => setValorProduto(e.target.value)}
+                                    className={inputModalClasses.replace('w-full', 'w-1/2')} // Classe condicional aplicada
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Quantidade"
+                                    value={quantidadeProduto}
+                                    onChange={(e) => setQuantidadeProduto(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    className={inputModalClasses.replace('w-full', 'w-1/2')} // Classe condicional aplicada
+                                />
+                            </div>
                         </div>
 
+                        {/* Mensagem de erro dentro do Modal */}
                         {erro && (
-                            <p className="text-red-400 font-medium mt-4">{erro}</p>
+                            <p className={`font-medium mt-4 ${modoNoturno ? 'text-red-400' : 'text-red-500'}`}>{erro}</p>
                         )}
 
-                        <div className="mt-6 flex flex-col space-y-3">
+                        {/* 5. BOTÕES DE AÇÃO PRINCIPAL (Lado a Lado - Fundo do Modal) */}
+                        <div className="mt-6 flex gap-4">
                             {/* Botão Adicionar/Atualizar (Azul) */}
                             <button
                                 onClick={handleAddProduto}
-                                className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 transition w-full"
+                                className="bg-blue-600 text-white font-semibold rounded-lg p-3 hover:bg-blue-700 transition w-1/2 shadow-md"
                             >
                                 {editandoIndex !== null ? 'Atualizar Produto' : 'Adicionar Produto'}
                             </button>
-                            {/* Botão Cancelar (Vermelho) */}
+                            {/* Botão Cancelar (Cinza) - AGORA OTIMIZADO */}
                             <button
-                                onClick={handleCloseModal}
-                                className="bg-red-600 text-white font-semibold rounded-lg p-3 hover:bg-red-700 transition w-full"
+                                onClick={handleCloseModal} 
+                                disabled={leitorAtivo} 
+                                className={`font-semibold rounded-lg p-3 transition w-1/2 shadow-md 
+                                    ${leitorAtivo 
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                        : 'bg-red-500 text-white hover:bg-red-600' // Estilo padrão para o Cancelar
+                                    }`}
                             >
-                                Cancelar
+                                {leitorAtivo ? 'Leitor Ativo...' : 'Cancelar'}
                             </button>
                         </div>
                     </div>

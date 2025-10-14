@@ -1,3 +1,12 @@
+@keyframes pulseRedLine {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.pulse-red {
+  animation: pulseRedLine 1s infinite;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
