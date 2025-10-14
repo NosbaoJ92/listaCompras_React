@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useTheme } from './ThemeContext'; 
 import { BrowserMultiFormatReader } from "@zxing/library";
+import produtosBR from './produtosBR.json';
 
 const COL_NOME = "w-2/5";
 const COL_VALOR = "w-1/5";
